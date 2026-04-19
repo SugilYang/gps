@@ -161,7 +161,9 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <label>고객사 선택</label>
       <select id="siteSelect" onchange="onSiteChange()">
         <option value="">-- 고객사를 선택하세요 --</option>
-        <option value="asan">충남 아산시 배방읍 58-44</option>
+        <option value="lges">LG에너지솔루션 오창 2공장</option>
+        <option value="ets">이티에스 본사</option>
+        <option value="asan">아산 배방 (테스트)</option>
       </select>
     </div>
   </div>
@@ -221,14 +223,27 @@ const SCRIPT_URL = "여기에_구글앱스스크립트_URL_붙여넣기";
 
 const SITES = {
   asan: {
-    name: "아산 배방 고객사",
+    name: "아산 배방 (테스트)",
     addr: "충청남도 아산시 배방읍 배방로 58-44",
     lat: 36.7696594,
     lng: 127.0490135,
-    radius: 500   // 미터
+    radius: 500
+  },
+  lges: {
+    name: "LG에너지솔루션 오창 2공장",
+    addr: "충청북도 청주시 청원구 오창읍 2산단로 81",
+    lat: 36.7320487,
+    lng: 127.4444017,
+    radius: 500
+  },
+  ets: {
+    name: "이티에스 본사",
+    addr: "충청남도 아산시 음봉면 스마트산단로 91",
+    lat: 36.855861,
+    lng: 127.1026417,
+    radius: 500
   }
   // 고객사 추가 시 여기에 계속 추가
-  // newsite: { name:"...", addr:"...", lat:00.0000, lng:000.0000, radius:500 }
 };
 // ════════════════════════════════════════════════
 
