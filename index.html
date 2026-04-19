@@ -222,9 +222,9 @@ const SCRIPT_URL = "여기에_구글앱스스크립트_URL_붙여넣기";
 const SITES = {
   asan: {
     name: "아산 배방 고객사",
-    addr: "충남 아산시 배방읍 공수리 58-44",
-    lat: 36.7927,
-    lng: 127.0180,
+    addr: "충청남도 아산시 배방읍 배방로 58-44",
+    lat: 36.7696594,
+    lng: 127.0490135,
     radius: 500   // 미터
   }
   // 고객사 추가 시 여기에 계속 추가
@@ -268,7 +268,7 @@ function loadSavedInfo() {
 }
 
 function initMap() {
-  map = L.map('map', { zoomControl:false, attributionControl:false }).setView([36.7927, 127.0180], 14);
+  map = L.map('map', { zoomControl:false, attributionControl:false }).setView([36.7696594, 127.0490135], 14);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(map);
 }
 
