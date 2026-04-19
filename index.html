@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ETS 출장 근태</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  --ink: #0A0F1E;
+  --blue: #1A6FFF;
+  --cyan: #00D4FF;
+  --green: #00E5A0;
+  --red: #FF4566;
+  --amber: #FFB830;
+  --glass: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.10);
+  --text: #E8EDF5;
+  --sub: #7A8BA8;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{background:var(--ink);color:var(--text);min-height:100vh;font-family:'Noto Sans KR',sans-serif;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(26,111,255,0.22) 0%,transparent 70%);
+  pointer-events:none;}
+
+/* 스플래시 */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity 0.7s,visibility 0.7s;}
+#splash.hide{opacity:0;visibility:hidden;}
+.splash-ring{width:56px;height:56px;border-radius:50%;border:3px solid var(--border);
+  border-top-color:var(--cyan);animation:spin 1s linear infinite;margin-bottom:28px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.splash-logo{font-family:'Outfit',sans-serif;font-weight:900;font-size:36px;
+  background:linear-gradient(135deg,var(--cyan),var(--blue));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.splash-sub{color:var(--sub);font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-top:6px;}
+
+/* 앱 */
+#app{position:relative;z-index:1;max-width:430px;margin:0 auto;padding-bottom:20px;}
+
+/* 헤더 */
+.header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
+  background:rgba(10,15,30,0.85);backdrop-filter:blur(20px);
+  position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);}
+.header-brand{font-family:'Outfit',sans-serif;font-weight:800;font-size:20px;
+  background:linear-gradient(90deg,var(--cyan),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.status-pill{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;}
+.pill-off{background:rgba(255,69,102,0.15);color:var(--red);border:1px solid rgba(255,69,102,0.3);}
+.pill-on{background:rgba(0,229,160,0.15);color:var(--green);border:1px solid rgba(0,229,160,0.3);}
+.pill-done{background:rgba(122,139,168,0.15);color:var(--sub);border:1px solid var(--border);}
+
+/* 직원 정보 입력 카드 */
+.setup-card{margin:14px 14px 0;background:var(--glass);border:1px solid var(--border);
+  border-radius:18px;padding:18px;}
+.setup-title{font-size:13px;font-weight:700;color:var(--sub);letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:14px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:500;}
+.field input,.field select{width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;
+  font-family:'Noto Sans KR',sans-serif;outline:none;}
+.field input::placeholder{color:var(--sub);}
+.field select option{background:#1A2540;color:var(--text);}
+
+/* 고객사 위치 카드 */
+.site-card{margin:12px 14px 0;background:var(--glass);border:1px solid var(--border);
+  border-radius:18px;overflow:hidden;}
+.site-header{padding:14px 16px 10px;display:flex;align-items:center;gap:10px;}
+.site-info{flex:1;}
+.site-name{font-size:14px;font-weight:700;}
+.site-addr{font-size:12px;color:var(--sub);margin-top:2px;}
+.distance-badge{font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap;}
+.dist-ok{background:rgba(0,229,160,0.15);color:var(--green);border:1px solid rgba(0,229,160,0.3);}
+.dist-far{background:rgba(255,69,102,0.15);color:var(--red);border:1px solid rgba(255,69,102,0.3);}
+.dist-loading{background:rgba(122,139,168,0.12);color:var(--sub);border:1px solid var(--border);}
+#map{height:170px;width:100%;}
+
+/* 출퇴근 버튼 */
+.action-row{margin:12px 14px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn-in,.btn-out{padding:22px 10px;border-radius:18px;border:none;cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:14px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  transition:transform 0.15s,box-shadow 0.15s;position:relative;overflow:hidden;}
+.btn-in{background:linear-gradient(135deg,#00E5A0,#00B4D8);color:#0A0F1E;
+  box-shadow:0 8px 28px rgba(0,229,160,0.35);}
+.btn-out{background:linear-gradient(135deg,#FF4566,#FF8C42);color:white;
+  box-shadow:0 8px 28px rgba(255,69,102,0.30);}
+.btn-in:active,.btn-out:active{transform:scale(0.96);}
+.btn-in:disabled,.btn-out:disabled{opacity:0.3;cursor:not-allowed;box-shadow:none;}
+.btn-icon{font-size:28px;}
+
+/* 오늘 기록 */
+.record-card{margin:12px 14px 0;background:var(--glass);border:1px solid var(--border);
+  border-radius:18px;padding:16px 18px;}
+.card-title{font-size:12px;font-weight:700;color:var(--sub);letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:14px;}
+.rec-row{display:flex;align-items:center;padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,0.05);}
+.rec-row:last-child{border-bottom:none;}
+.rec-dot{width:9px;height:9px;border-radius:50%;margin-right:12px;flex-shrink:0;}
+.dot-in{background:var(--green);box-shadow:0 0 7px var(--green);}
+.dot-out{background:var(--red);box-shadow:0 0 7px var(--red);}
+.rec-body{flex:1;}
+.rec-type{font-size:13px;font-weight:600;}
+.rec-meta{font-size:11px;color:var(--sub);margin-top:2px;}
+.rec-time{font-family:'Outfit',sans-serif;font-weight:700;font-size:16px;}
+.empty-msg{text-align:center;color:var(--sub);font-size:13px;padding:18px 0;}
+
+/* 전송 상태 */
+.send-status{margin:10px 14px 0;padding:10px 16px;border-radius:12px;
+  font-size:12px;font-weight:600;display:none;text-align:center;}
+.send-ok{background:rgba(0,229,160,0.12);color:var(--green);border:1px solid rgba(0,229,160,0.25);}
+.send-fail{background:rgba(255,184,48,0.12);color:var(--amber);border:1px solid rgba(255,184,48,0.25);}
+
+/* 안내 배너 */
+.notice{margin:12px 14px 0;background:rgba(26,111,255,0.08);border:1px solid rgba(26,111,255,0.2);
+  border-radius:14px;padding:12px 16px;font-size:12px;color:#7AB8FF;line-height:1.7;}
+.notice strong{color:var(--cyan);}
+
+/* 토스트 */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#1A2540;color:var(--text);border:1px solid var(--border);
+  padding:12px 22px;border-radius:30px;font-size:13px;z-index:800;
+  opacity:0;transition:all 0.3s ease;white-space:nowrap;
+  box-shadow:0 8px 24px rgba(0,0,0,0.5);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="splash-ring"></div>
+  <div class="splash-logo">ETS</div>
+  <div class="splash-sub">출장 근태 시스템</div>
+</div>
+
+<div id="app" style="display:none">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="header-brand">ETS 근태</div>
+    <div class="status-pill pill-off" id="statusPill">● 미출근</div>
+  </div>
+
+  <!-- 직원 정보 -->
+  <div class="setup-card">
+    <div class="setup-title">👤 직원 정보</div>
+    <div class="field">
+      <label>이름</label>
+      <input type="text" id="empName" placeholder="홍길동" maxlength="10">
+    </div>
+    <div class="field">
+      <label>부서</label>
+      <input type="text" id="empDept" placeholder="해외사업팀" maxlength="20">
+    </div>
+    <div class="field">
+      <label>고객사 선택</label>
+      <select id="siteSelect" onchange="onSiteChange()">
+        <option value="">-- 고객사를 선택하세요 --</option>
+        <option value="asan">충남 아산시 배방읍 58-44</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 고객사 위치 & 지도 -->
+  <div class="site-card" id="siteCard" style="display:none">
+    <div class="site-header">
+      <div>📍</div>
+      <div class="site-info">
+        <div class="site-name" id="siteName">-</div>
+        <div class="site-addr" id="siteAddr">-</div>
+      </div>
+      <div class="distance-badge dist-loading" id="distBadge">측정중...</div>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <!-- 출근 / 퇴근 버튼 -->
+  <div class="action-row">
+    <button class="btn-in" id="btnIn" onclick="doCheck('in')" disabled>
+      <span class="btn-icon">🟢</span>
+      <span>출근</span>
+      <span style="font-size:11px;opacity:0.8;">GPS 기록</span>
+    </button>
+    <button class="btn-out" id="btnOut" onclick="doCheck('out')" disabled>
+      <span class="btn-icon">🔴</span>
+      <span>퇴근</span>
+      <span style="font-size:11px;opacity:0.8;">GPS 기록</span>
+    </button>
+  </div>
+
+  <!-- 전송 상태 -->
+  <div class="send-status" id="sendStatus"></div>
+
+  <!-- 오늘 기록 -->
+  <div class="record-card">
+    <div class="card-title">📋 오늘 기록</div>
+    <div id="recordList"><div class="empty-msg">아직 기록이 없어요</div></div>
+  </div>
+
+  <!-- 안내 -->
+  <div class="notice">
+    ⚠️ <strong>출퇴근은 고객사 반경 500m 이내</strong>에서만 가능합니다.<br>
+    기록은 <strong>구글 시트</strong>에 자동 저장되어 관리자가 확인합니다.<br>
+    GPS 권한을 반드시 허용해 주세요.
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════
+//  ⚙️  설정 - 여기만 바꾸면 됩니다
+// ════════════════════════════════════════════════
+const SCRIPT_URL = "여기에_구글앱스스크립트_URL_붙여넣기";
+
+const SITES = {
+  asan: {
+    name: "아산 배방 고객사",
+    addr: "충남 아산시 배방읍 공수리 58-44",
+    lat: 36.7927,
+    lng: 127.0180,
+    radius: 500   // 미터
+  }
+  // 고객사 추가 시 여기에 계속 추가
+  // newsite: { name:"...", addr:"...", lat:00.0000, lng:000.0000, radius:500 }
+};
+// ════════════════════════════════════════════════
+
+let map, siteCircle, userMarker, siteMarker;
+let currentLat = null, currentLng = null;
+let selectedSite = null;
+let isCheckedIn = false;
+let watchId = null;
+let records = JSON.parse(localStorage.getItem('ets_rec') || '[]');
+
+// 스플래시
+setTimeout(() => {
+  document.getElementById('splash').classList.add('hide');
+  document.getElementById('app').style.display = 'block';
+  initMap();
+  loadSavedInfo();
+  loadTodayRecords();
+}, 2000);
+
+function loadSavedInfo() {
+  const saved = JSON.parse(localStorage.getItem('ets_emp') || '{}');
+  if (saved.name) document.getElementById('empName').value = saved.name;
+  if (saved.dept) document.getElementById('empDept').value = saved.dept;
+  if (saved.site) {
+    document.getElementById('siteSelect').value = saved.site;
+    onSiteChange();
+  }
+  const todayStatus = getTodayStatus();
+  if (todayStatus === 'in') {
+    isCheckedIn = true;
+    setButtonState('working');
+    updateStatusPill('on');
+  } else if (todayStatus === 'done') {
+    setButtonState('done');
+    updateStatusPill('done');
+  }
+}
+
+function initMap() {
+  map = L.map('map', { zoomControl:false, attributionControl:false }).setView([36.7927, 127.0180], 14);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(map);
+}
+
+function onSiteChange() {
+  const val = document.getElementById('siteSelect').value;
+  if (!val) { document.getElementById('siteCard').style.display = 'none'; stopWatch(); return; }
+  selectedSite = SITES[val];
+  document.getElementById('siteCard').style.display = 'block';
+  document.getElementById('siteName').textContent = selectedSite.name;
+  document.getElementById('siteAddr').textContent = selectedSite.addr;
+
+  // 저장
+  const emp = { name: document.getElementById('empName').value, dept: document.getElementById('empDept').value, site: val };
+  localStorage.setItem('ets_emp', JSON.stringify(emp));
+
+  // 지도 세팅
+  map.setView([selectedSite.lat, selectedSite.lng], 15);
+  if (siteMarker) map.removeLayer(siteMarker);
+  if (siteCircle) map.removeLayer(siteCircle);
+
+  siteMarker = L.marker([selectedSite.lat, selectedSite.lng], {
+    icon: L.divIcon({ html:'<div style="background:#1A6FFF;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px #1A6FFF;"></div>', iconSize:[14,14], iconAnchor:[7,7] })
+  }).bindPopup(`📍 ${selectedSite.name}`).addTo(map);
+
+  siteCircle = L.circle([selectedSite.lat, selectedSite.lng], {
+    radius: selectedSite.radius, color:'#1A6FFF', fillColor:'#1A6FFF', fillOpacity:0.08, weight:2
+  }).addTo(map);
+
+  startWatch();
+}
+
+function startWatch() {
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+  if (!navigator.geolocation) { showToast('❌ GPS를 지원하지 않는 기기입니다'); return; }
+  watchId = navigator.geolocation.watchPosition(onPos, onPosErr, { enableHighAccuracy:true, maximumAge:10000 });
+}
+function stopWatch() { if (watchId) { navigator.geolocation.clearWatch(watchId); watchId=null; } }
+
+function onPos(pos) {
+  currentLat = pos.coords.latitude;
+  currentLng = pos.coords.longitude;
+  if (!selectedSite) return;
+
+  // 사용자 마커 업데이트
+  if (userMarker) map.removeLayer(userMarker);
+  userMarker = L.circleMarker([currentLat, currentLng], {
+    radius:8, fillColor:'#00E5A0', color:'white', weight:2, fillOpacity:1
+  }).addTo(map);
+
+  const dist = calcDist(currentLat, currentLng, selectedSite.lat, selectedSite.lng);
+  const distText = dist < 1000 ? `${Math.round(dist)}m` : `${(dist/1000).toFixed(1)}km`;
+  const within = dist <= selectedSite.radius;
+
+  const badge = document.getElementById('distBadge');
+  badge.textContent = within ? `✅ ${distText} (출퇴근 가능)` : `⛔ ${distText} (범위 초과)`;
+  badge.className = 'distance-badge ' + (within ? 'dist-ok' : 'dist-far');
+
+  // 버튼 활성화 여부
+  const todayStatus = getTodayStatus();
+  if (within && todayStatus === 'none') {
+    document.getElementById('btnIn').disabled = false;
+  } else if (within && todayStatus === 'in') {
+    document.getElementById('btnOut').disabled = false;
+  }
+  if (!within) {
+    document.getElementById('btnIn').disabled = true;
+    document.getElementById('btnOut').disabled = true;
+  }
+}
+function onPosErr() {
+  document.getElementById('distBadge').textContent = '❌ GPS 오류';
+  document.getElementById('distBadge').className = 'distance-badge dist-far';
+  showToast('⚠️ GPS 권한을 허용해 주세요');
+}
+
+// 출퇴근 처리
+function doCheck(type) {
+  const name = document.getElementById('empName').value.trim();
+  const dept = document.getElementById('empDept').value.trim();
+  if (!name) { showToast('⚠️ 이름을 입력해주세요'); return; }
+  if (!selectedSite) { showToast('⚠️ 고객사를 선택해주세요'); return; }
+  if (!currentLat) { showToast('⚠️ GPS 위치를 확인 중입니다'); return; }
+
+  const now = new Date();
+  const krTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  const record = {
+    type, name, dept,
+    site: selectedSite.name,
+    addr: selectedSite.addr,
+    lat: currentLat.toFixed(6),
+    lng: currentLng.toFixed(6),
+    date: krTime.toLocaleDateString('ko-KR'),
+    time: krTime.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }),
+    timestamp: now.toISOString()
+  };
+
+  records.push(record);
+  localStorage.setItem('ets_rec', JSON.stringify(records));
+
+  if (type === 'in') {
+    isCheckedIn = true;
+    setButtonState('working');
+    updateStatusPill('on');
+    showToast('✅ 출근이 기록되었습니다');
+  } else {
+    setButtonState('done');
+    updateStatusPill('done');
+    showToast('🔴 퇴근이 기록되었습니다');
+  }
+  loadTodayRecords();
+  sendToSheet(record);
+}
+
+// 구글 시트 전송
+function sendToSheet(record) {
+  if (SCRIPT_URL === "여기에_구글앱스스크립트_URL_붙여넣기") {
+    showSendStatus('⚠️ 구글 시트 URL 미설정 (로컬 저장만 완료)', 'fail');
+    return;
+  }
+  showSendStatus('📤 서버 전송 중...', 'loading');
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record)
+  })
+  .then(() => showSendStatus('✅ 구글 시트에 저장 완료!', 'ok'))
+  .catch(() => {
+    showSendStatus('⚠️ 전송 실패 - 로컬 저장됨 (재연결 시 재전송)', 'fail');
+  });
+}
+
+// 오늘 기록 표시
+function loadTodayRecords() {
+  const today = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})).toLocaleDateString('ko-KR');
+  const todayRecs = records.filter(r => r.date === today);
+  const el = document.getElementById('recordList');
+  if (!todayRecs.length) { el.innerHTML = '<div class="empty-msg">아직 기록이 없어요</div>'; return; }
+  el.innerHTML = todayRecs.map(r => `
+    <div class="rec-row">
+      <div class="rec-dot ${r.type==='in'?'dot-in':'dot-out'}"></div>
+      <div class="rec-body">
+        <div class="rec-type">${r.type==='in'?'출근':'퇴근'} — ${r.site}</div>
+        <div class="rec-meta">📍 ${r.lat}, ${r.lng}</div>
+      </div>
+      <div class="rec-time">${r.time}</div>
+    </div>`).join('');
+}
+
+// 유틸
+function getTodayStatus() {
+  const today = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})).toLocaleDateString('ko-KR');
+  const t = records.filter(r=>r.date===today);
+  const hasIn = t.some(r=>r.type==='in');
+  const hasOut = t.some(r=>r.type==='out');
+  if (hasIn && hasOut) return 'done';
+  if (hasIn) return 'in';
+  return 'none';
+}
+function setButtonState(state) {
+  const bi = document.getElementById('btnIn'), bo = document.getElementById('btnOut');
+  if (state==='working') { bi.disabled=true; bo.disabled=false; }
+  else if (state==='done') { bi.disabled=true; bo.disabled=true; }
+  else { bi.disabled=false; bo.disabled=true; }
+}
+function updateStatusPill(state) {
+  const p = document.getElementById('statusPill');
+  if (state==='on') { p.className='status-pill pill-on'; p.textContent='● 근무중'; }
+  else if (state==='done') { p.className='status-pill pill-done'; p.textContent='● 퇴근완료'; }
+  else { p.className='status-pill pill-off'; p.textContent='● 미출근'; }
+}
+function showSendStatus(msg, type) {
+  const el = document.getElementById('sendStatus');
+  el.textContent = msg;
+  el.className = 'send-status ' + (type==='ok'?'send-ok':'send-fail');
+  el.style.display = 'block';
+  if (type==='ok') setTimeout(()=>el.style.display='none', 4000);
+}
+function calcDist(lat1,lng1,lat2,lng2) {
+  const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+let toastTimer;
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
