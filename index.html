@@ -1228,37 +1228,6 @@ function updateStatus(rec) {
   }
 }
 
-// ══════════════════════════════════════════
-//  출장지 DB (샘플 - 나중에 구글시트로 교체)
-// ══════════════════════════════════════════
-const SITE_DB = [
-  // ── 국내 ─────────────────────────────────────────────────────
-  // LG에너지솔루션 국내
-  { id:'lges_oc1', group:'LG에너지솔루션 (국내)', name:'LG에너지솔루션 오창 1공장', addr:'충북 청주시 청원구 오창읍', lat:36.7272, lng:127.4530, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
-  { id:'lges_oc2', group:'LG에너지솔루션 (국내)', name:'LG에너지솔루션 오창 2공장', addr:'충북 청주시 청원구 오창읍', lat:36.7310, lng:127.4560, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
-  { id:'lges_gm',  group:'LG에너지솔루션 (국내)', name:'LG에너지솔루션 광명 사업장', addr:'경기도 광명시',           lat:37.4570, lng:126.8650, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
-  // 삼성SDI 국내
-  { id:'sdi_ch',   group:'삼성SDI (국내)',        name:'삼성SDI 천안사업장',        addr:'충남 천안시 서북구',      lat:36.8560, lng:127.1480, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
-  { id:'sdi_ul',   group:'삼성SDI (국내)',        name:'삼성SDI 울산사업장',        addr:'울산광역시 울주군',       lat:35.5390, lng:129.3090, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
-  // SK온 국내
-  { id:'sko_sf',   group:'SK온 (국내)',           name:'SK온 서산배터리공장',       addr:'충남 서산시 대산읍',      lat:36.9920, lng:126.4540, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
-
-  // ── 해외 ─────────────────────────────────────────────────────
-  // LG에너지솔루션 미국
-  { id:'lges_us_hl', group:'LG에너지솔루션 (미국)', name:'LG에너지솔루션 홀랜드 공장',    addr:'Michigan, Holland, USA',      lat:42.7875, lng:-86.1089, radius:500, flag:'🇺🇸', country:'미국 (중부)', tz:'America/Chicago' },
-  { id:'lges_us_az', group:'LG에너지솔루션 (미국)', name:'LG에너지솔루션 퀸크릭 공장',    addr:'Arizona, Queen Creek, USA',   lat:33.2481, lng:-111.6341, radius:500, flag:'🇺🇸', country:'미국 (산악)', tz:'America/Phoenix' },
-  // 삼성SDI 미국
-  { id:'sdi_us_in',  group:'삼성SDI (미국)',        name:'삼성SDI 뉴칼라일 공장',         addr:'Indiana, New Carlisle, USA',  lat:41.7003, lng:-86.5197, radius:500, flag:'🇺🇸', country:'미국 (동부)', tz:'America/New_York' },
-  // LG에너지솔루션 유럽
-  { id:'lges_pl',    group:'LG에너지솔루션 (유럽)', name:'LG에너지솔루션 브로츠와프 공장', addr:'Wrocław, Poland',             lat:51.0988, lng:16.9436, radius:500, flag:'🇵🇱', country:'폴란드',     tz:'Europe/Warsaw' },
-  // 삼성SDI 유럽
-  { id:'sdi_hu',     group:'삼성SDI (유럽)',        name:'삼성SDI 괴드 공장',             addr:'Göd, Hungary',                lat:47.6989, lng:19.1303, radius:500, flag:'🇭🇺', country:'헝가리',     tz:'Europe/Budapest' },
-  // LG에너지솔루션 중국
-  { id:'lges_cn_nj', group:'LG에너지솔루션 (중국)', name:'LG에너지솔루션 난징 공장',      addr:'Nanjing, China',              lat:32.0603, lng:118.7969, radius:500, flag:'🇨🇳', country:'중국',       tz:'Asia/Shanghai' },
-  // 이티에스 본사
-  { id:'hq',         group:'이티에스 본사',         name:'이티에스 본사',                 addr:'(본사 주소)',                  lat:37.5000, lng:127.0000, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
-];
-
 let selectedSite = null;
 
 // ══════════════════════════════════════════
