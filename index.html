@@ -3,474 +3,1567 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ETS 출장 근태</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a7a65">
+<title>이티에스 근태관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
 <style>
-:root {
-  --ink: #0A0F1E;
-  --blue: #1A6FFF;
-  --cyan: #00D4FF;
-  --green: #00E5A0;
-  --red: #FF4566;
-  --amber: #FFB830;
-  --glass: rgba(255,255,255,0.06);
-  --border: rgba(255,255,255,0.10);
-  --text: #E8EDF5;
-  --sub: #7A8BA8;
-}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{background:var(--ink);color:var(--text);min-height:100vh;font-family:'Noto Sans KR',sans-serif;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;z-index:0;
-  background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(26,111,255,0.22) 0%,transparent 70%);
-  pointer-events:none;}
+  :root {
+    --teal:       #2aab8e;
+    --teal-dark:  #1a7a65;
+    --teal-light: #e6f7f3;
+    --teal-mid:   #3dc4a5;
+    --navy:       #0d2e27;
+    --gold:       #f5a623;
+    --red:        #e74c3c;
+    --red-light:  #fdf0ef;
+    --gray-xl:    #f4f6f5;
+    --gray-l:     #e2e8e6;
+    --gray:       #9aada9;
+    --gray-d:     #4a6460;
+    --white:      #ffffff;
+    --font:       'Noto Sans KR', sans-serif;
+    --radius:     16px;
+    --shadow:     0 4px 20px rgba(26,122,101,0.12);
+    --shadow-lg:  0 8px 32px rgba(26,122,101,0.18);
+  }
 
-/* 스플래시 */
-#splash{position:fixed;inset:0;z-index:9999;background:var(--ink);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  transition:opacity 0.7s,visibility 0.7s;}
-#splash.hide{opacity:0;visibility:hidden;}
-.splash-ring{width:56px;height:56px;border-radius:50%;border:3px solid var(--border);
-  border-top-color:var(--cyan);animation:spin 1s linear infinite;margin-bottom:28px;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.splash-logo{font-family:'Outfit',sans-serif;font-weight:900;font-size:36px;
-  background:linear-gradient(135deg,var(--cyan),var(--blue));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.splash-sub{color:var(--sub);font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-top:6px;}
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
-/* 앱 */
-#app{position:relative;z-index:1;max-width:430px;margin:0 auto;padding-bottom:20px;}
+  body {
+    font-family: var(--font);
+    background: var(--gray-xl);
+    color: var(--navy);
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    position: relative;
+    overflow-x: hidden;
+  }
 
-/* 헤더 */
-.header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
-  background:rgba(10,15,30,0.85);backdrop-filter:blur(20px);
-  position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);}
-.header-brand{font-family:'Outfit',sans-serif;font-weight:800;font-size:20px;
-  background:linear-gradient(90deg,var(--cyan),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.status-pill{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;}
-.pill-off{background:rgba(255,69,102,0.15);color:var(--red);border:1px solid rgba(255,69,102,0.3);}
-.pill-on{background:rgba(0,229,160,0.15);color:var(--green);border:1px solid rgba(0,229,160,0.3);}
-.pill-done{background:rgba(122,139,168,0.15);color:var(--sub);border:1px solid var(--border);}
+  /* ── 스플래시 ── */
+  #splash {
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(160deg, var(--teal-dark) 0%, var(--teal) 60%, var(--teal-mid) 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  #splash.hide { opacity:0; transform:scale(1.05); pointer-events:none; }
 
-/* 직원 정보 입력 카드 */
-.setup-card{margin:14px 14px 0;background:var(--glass);border:1px solid var(--border);
-  border-radius:18px;padding:18px;}
-.setup-title{font-size:13px;font-weight:700;color:var(--sub);letter-spacing:1px;
-  text-transform:uppercase;margin-bottom:14px;}
-.field{margin-bottom:12px;}
-.field label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:500;}
-.field input,.field select{width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);
-  border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;
-  font-family:'Noto Sans KR',sans-serif;outline:none;}
-.field input::placeholder{color:var(--sub);}
-.field select option{background:#1A2540;color:var(--text);}
+  .splash-logo {
+    width: 90px; height: 90px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    animation: splashPop 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
+  }
+  @keyframes splashPop {
+    from { opacity:0; transform:scale(0.6); }
+    to   { opacity:1; transform:scale(1); }
+  }
+  .splash-logo svg { width:54px; height:54px; }
 
-/* 고객사 위치 카드 */
-.site-card{margin:12px 14px 0;background:var(--glass);border:1px solid var(--border);
-  border-radius:18px;overflow:hidden;}
-.site-header{padding:14px 16px 10px;display:flex;align-items:center;gap:10px;}
-.site-info{flex:1;}
-.site-name{font-size:14px;font-weight:700;}
-.site-addr{font-size:12px;color:var(--sub);margin-top:2px;}
-.distance-badge{font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap;}
-.dist-ok{background:rgba(0,229,160,0.15);color:var(--green);border:1px solid rgba(0,229,160,0.3);}
-.dist-far{background:rgba(255,69,102,0.15);color:var(--red);border:1px solid rgba(255,69,102,0.3);}
-.dist-loading{background:rgba(122,139,168,0.12);color:var(--sub);border:1px solid var(--border);}
-#map{height:170px;width:100%;}
+  .splash-brand {
+    font-size: 36px; font-weight: 900; color: #fff; letter-spacing: -1px;
+    animation: fadeUp 0.5s ease 0.5s both;
+  }
+  .splash-sub {
+    font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 6px; letter-spacing: 3px;
+    animation: fadeUp 0.5s ease 0.65s both;
+  }
+  .splash-bar-wrap {
+    width: 160px; height: 3px; background: rgba(255,255,255,0.2);
+    border-radius: 99px; margin-top: 48px; overflow: hidden;
+    animation: fadeUp 0.5s ease 0.8s both;
+  }
+  .splash-bar {
+    height: 100%; width: 0%; background: #fff; border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+  .splash-status {
+    font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 10px;
+    animation: fadeUp 0.5s ease 0.9s both;
+    min-height: 16px;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(14px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
 
-/* 출퇴근 버튼 */
-.action-row{margin:12px 14px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.btn-in,.btn-out{padding:22px 10px;border-radius:18px;border:none;cursor:pointer;
-  font-family:'Noto Sans KR',sans-serif;font-weight:700;font-size:14px;
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  transition:transform 0.15s,box-shadow 0.15s;position:relative;overflow:hidden;}
-.btn-in{background:linear-gradient(135deg,#00E5A0,#00B4D8);color:#0A0F1E;
-  box-shadow:0 8px 28px rgba(0,229,160,0.35);}
-.btn-out{background:linear-gradient(135deg,#FF4566,#FF8C42);color:white;
-  box-shadow:0 8px 28px rgba(255,69,102,0.30);}
-.btn-in:active,.btn-out:active{transform:scale(0.96);}
-.btn-in:disabled,.btn-out:disabled{opacity:0.3;cursor:not-allowed;box-shadow:none;}
-.btn-icon{font-size:28px;}
+  /* ── 메인 앱 ── */
+  #app { display:none; padding-bottom: 80px; }
 
-/* 오늘 기록 */
-.record-card{margin:12px 14px 0;background:var(--glass);border:1px solid var(--border);
-  border-radius:18px;padding:16px 18px;}
-.card-title{font-size:12px;font-weight:700;color:var(--sub);letter-spacing:1px;
-  text-transform:uppercase;margin-bottom:14px;}
-.rec-row{display:flex;align-items:center;padding:10px 0;
-  border-bottom:1px solid rgba(255,255,255,0.05);}
-.rec-row:last-child{border-bottom:none;}
-.rec-dot{width:9px;height:9px;border-radius:50%;margin-right:12px;flex-shrink:0;}
-.dot-in{background:var(--green);box-shadow:0 0 7px var(--green);}
-.dot-out{background:var(--red);box-shadow:0 0 7px var(--red);}
-.rec-body{flex:1;}
-.rec-type{font-size:13px;font-weight:600;}
-.rec-meta{font-size:11px;color:var(--sub);margin-top:2px;}
-.rec-time{font-family:'Outfit',sans-serif;font-weight:700;font-size:16px;}
-.empty-msg{text-align:center;color:var(--sub);font-size:13px;padding:18px 0;}
+  /* ── 헤더 ── */
+  .app-header {
+    background: linear-gradient(135deg, var(--teal-dark) 0%, var(--teal) 100%);
+    padding: 52px 20px 24px;
+    position: relative; overflow: hidden;
+  }
+  .app-header::before {
+    content:''; position:absolute; top:-40px; right:-30px;
+    width:160px; height:160px; border-radius:50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .app-header::after {
+    content:''; position:absolute; bottom:-60px; right:30px;
+    width:120px; height:120px; border-radius:50%;
+    background: rgba(255,255,255,0.04);
+  }
 
-/* 전송 상태 */
-.send-status{margin:10px 14px 0;padding:10px 16px;border-radius:12px;
-  font-size:12px;font-weight:600;display:none;text-align:center;}
-.send-ok{background:rgba(0,229,160,0.12);color:var(--green);border:1px solid rgba(0,229,160,0.25);}
-.send-fail{background:rgba(255,184,48,0.12);color:var(--amber);border:1px solid rgba(255,184,48,0.25);}
+  .header-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .header-logo {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-box {
+    width: 36px; height: 36px; background: rgba(255,255,255,0.2);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .logo-box svg { width:22px; height:22px; }
+  .logo-text { font-size:20px; font-weight:900; color:#fff; letter-spacing:-0.5px; }
+  .logo-text span { font-weight:300; font-size:11px; color:rgba(255,255,255,0.7); display:block; letter-spacing:1px; margin-top:-2px; }
 
-/* 안내 배너 */
-.notice{margin:12px 14px 0;background:rgba(26,111,255,0.08);border:1px solid rgba(26,111,255,0.2);
-  border-radius:14px;padding:12px 16px;font-size:12px;color:#7AB8FF;line-height:1.7;}
-.notice strong{color:var(--cyan);}
+  .header-notice-btn {
+    width:36px; height:36px; background:rgba(255,255,255,0.15);
+    border-radius:10px; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+  }
+  .notice-dot {
+    position:absolute; top:6px; right:6px;
+    width:8px; height:8px; background:var(--gold);
+    border-radius:50%; border:2px solid var(--teal-dark);
+  }
 
-/* 토스트 */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
-  background:#1A2540;color:var(--text);border:1px solid var(--border);
-  padding:12px 22px;border-radius:30px;font-size:13px;z-index:800;
-  opacity:0;transition:all 0.3s ease;white-space:nowrap;
-  box-shadow:0 8px 24px rgba(0,0,0,0.5);}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  /* 날짜/시간 */
+  .header-datetime {
+    background: rgba(255,255,255,0.1); border-radius: 14px;
+    padding: 14px 16px; backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .datetime-date {
+    font-size: 13px; color: rgba(255,255,255,0.75); font-weight:500;
+    margin-bottom: 4px; display:flex; align-items:center; gap:6px;
+  }
+  .datetime-time {
+    font-size: 34px; font-weight: 900; color: #fff; letter-spacing: -1px;
+    line-height: 1;
+  }
+  .datetime-time .midnight-badge {
+    display:inline-block; background:var(--gold); color:var(--navy);
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px;
+    vertical-align:middle; margin-left:8px; letter-spacing:0.5px;
+  }
+  .datetime-time .local-badge {
+    display:inline-block; background:rgba(255,255,255,0.25); color:#fff;
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px;
+    vertical-align:middle; margin-left:6px; letter-spacing:0.5px;
+    border: 1px solid rgba(255,255,255,0.4);
+  }
+
+  /* ── 직원 카드 ── */
+  .emp-card {
+    margin: 16px; background:var(--white);
+    border-radius: var(--radius); padding: 16px;
+    box-shadow: var(--shadow);
+    display:flex; align-items:center; gap:14px;
+  }
+  .emp-avatar {
+    width:48px; height:48px; border-radius:14px;
+    background: linear-gradient(135deg, var(--teal-light), var(--teal));
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; font-weight:900; color:#fff; flex-shrink:0;
+  }
+  .emp-info { flex:1; min-width:0; }
+  .emp-name { font-size:17px; font-weight:700; color:var(--navy); }
+  .emp-meta { font-size:12px; color:var(--gray); margin-top:2px; }
+  .emp-badge {
+    background:var(--teal-light); color:var(--teal-dark);
+    font-size:11px; font-weight:600; padding:4px 10px; border-radius:99px;
+    flex-shrink:0;
+  }
+
+  /* ── 출퇴근 섹션 ── */
+  .section { margin: 0 16px 16px; }
+  .section-title {
+    font-size:12px; font-weight:700; color:var(--gray);
+    letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;
+    padding-left:4px;
+  }
+
+  /* 위치 카드 */
+  .location-card {
+    background:var(--white); border-radius: var(--radius);
+    padding: 14px 16px; box-shadow: var(--shadow);
+    display:flex; align-items:center; gap:12px; margin-bottom:12px;
+  }
+  .location-icon {
+    width:38px; height:38px; border-radius:11px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .location-icon.ok { background:var(--teal-light); }
+  .location-icon.fail { background:var(--red-light); }
+  .location-icon.checking { background:#fff8e6; }
+  .location-info { flex:1; min-width:0; }
+  .location-name { font-size:14px; font-weight:600; color:var(--navy); }
+  .location-status { font-size:12px; margin-top:1px; }
+  .location-status.ok { color:var(--teal); }
+  .location-status.fail { color:var(--red); }
+  .location-status.checking { color:var(--gold); }
+
+  /* 출퇴근 버튼 */
+  .att-buttons { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  .att-btn {
+    border:none; border-radius: var(--radius); padding: 20px 16px;
+    cursor:pointer; transition: all 0.2s ease;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    position:relative; overflow:hidden;
+  }
+  .att-btn:active { transform:scale(0.96); }
+  .att-btn::before {
+    content:''; position:absolute; inset:0;
+    background:rgba(255,255,255,0.15); opacity:0;
+    transition:opacity 0.2s;
+  }
+  .att-btn:active::before { opacity:1; }
+
+  .att-btn.checkin {
+    background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+    box-shadow: 0 6px 20px rgba(42,171,142,0.4);
+  }
+  .att-btn.checkout {
+    background: linear-gradient(135deg, #2c3e50, #4a6480);
+    box-shadow: 0 6px 20px rgba(44,62,80,0.3);
+  }
+  .att-btn.disabled {
+    background: var(--gray-l); box-shadow:none; cursor:not-allowed;
+    opacity:0.6;
+  }
+
+  .att-btn-icon { font-size:28px; }
+  .att-btn-label { font-size:16px; font-weight:700; color:#fff; }
+  .att-btn.disabled .att-btn-label { color:var(--gray); }
+  .att-btn-time { font-size:11px; color:rgba(255,255,255,0.7); }
+  .att-btn.disabled .att-btn-time { color:var(--gray); }
+
+  /* 상태 카드 */
+  .status-card {
+    background:var(--white); border-radius:var(--radius);
+    padding:16px; box-shadow:var(--shadow);
+  }
+  .status-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0; border-bottom:1px solid var(--gray-l);
+  }
+  .status-row:last-child { border-bottom:none; padding-bottom:0; }
+  .status-row:first-child { padding-top:0; }
+  .status-label { font-size:13px; color:var(--gray-d); font-weight:500; }
+  .status-value { font-size:13px; font-weight:700; color:var(--navy); }
+  .status-value.tag {
+    font-size:11px; padding:3px 10px; border-radius:99px;
+  }
+  .tag-ok { background:var(--teal-light); color:var(--teal-dark); }
+  .tag-late { background:#fff3cd; color:#856404; }
+  .tag-absent { background:var(--red-light); color:var(--red); }
+  .tag-off { background:var(--gray-l); color:var(--gray-d); }
+
+  /* ── 하단 네비 ── */
+  .bottom-nav {
+    position: fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:430px;
+    background:var(--white); border-top:1px solid var(--gray-l);
+    display:grid; grid-template-columns:repeat(4,1fr);
+    padding: 8px 0 20px; z-index:100;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+  }
+  .nav-item {
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:6px 0; cursor:pointer; border:none; background:none;
+    transition: all 0.2s;
+  }
+  .nav-icon { font-size:22px; transition:transform 0.2s; }
+  .nav-label { font-size:10px; font-weight:600; color:var(--gray); letter-spacing:0.3px; }
+  .nav-item.active .nav-label { color:var(--teal); }
+  .nav-item.active .nav-icon { transform:translateY(-2px); }
+
+  /* ── 페이지들 ── */
+  .page { display:none; }
+  .page.active { display:block; }
+
+  /* 이력 페이지 */
+  .page-header {
+    background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+    padding: 52px 20px 20px;
+  }
+  .page-header-title { font-size:22px; font-weight:900; color:#fff; }
+  .page-header-sub { font-size:13px; color:rgba(255,255,255,0.7); margin-top:4px; }
+
+  .history-filter {
+    display:flex; gap:8px; padding:14px 16px; overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .filter-chip {
+    flex-shrink:0; padding:6px 14px; border-radius:99px;
+    font-size:12px; font-weight:600; border:1.5px solid var(--gray-l);
+    background:var(--white); color:var(--gray-d); cursor:pointer;
+    transition:all 0.2s;
+  }
+  .filter-chip.active {
+    background:var(--teal); border-color:var(--teal); color:#fff;
+  }
+
+  .history-list { padding:0 16px; }
+  .history-item {
+    background:var(--white); border-radius:var(--radius);
+    padding:16px; margin-bottom:10px; box-shadow:var(--shadow);
+  }
+  .history-date {
+    font-size:12px; color:var(--gray); font-weight:600; margin-bottom:8px;
+  }
+  .history-times {
+    display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;
+  }
+  .history-time-box {
+    background:var(--gray-xl); border-radius:10px; padding:10px 12px;
+  }
+  .history-time-label { font-size:10px; color:var(--gray); font-weight:600; margin-bottom:2px; }
+  .history-time-val { font-size:16px; font-weight:700; color:var(--navy); }
+  .history-footer {
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .history-work-time { font-size:12px; color:var(--gray-d); }
+  .history-work-time strong { color:var(--teal-dark); font-weight:700; }
+
+  /* 통계 페이지 */
+  .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:16px; }
+  .stat-card {
+    background:var(--white); border-radius:var(--radius);
+    padding:18px 16px; box-shadow:var(--shadow);
+    text-align:center;
+  }
+  .stat-icon { font-size:28px; margin-bottom:8px; }
+  .stat-value { font-size:26px; font-weight:900; color:var(--teal-dark); }
+  .stat-label { font-size:11px; color:var(--gray); margin-top:4px; font-weight:600; }
+
+  .stat-card.wide {
+    grid-column:1/-1;
+    display:flex; align-items:center; gap:16px; text-align:left;
+  }
+  .stat-card.wide .stat-icon { font-size:36px; flex-shrink:0; }
+  .stat-card.wide .stat-label { font-size:12px; }
+
+  /* 공지 페이지 */
+  .notice-list { padding:16px; }
+  .notice-item {
+    background:var(--white); border-radius:var(--radius);
+    padding:16px; margin-bottom:10px; box-shadow:var(--shadow);
+    border-left:4px solid var(--teal);
+  }
+  .notice-item.important { border-left-color:var(--red); }
+  .notice-badge {
+    display:inline-block; font-size:10px; font-weight:700;
+    padding:2px 8px; border-radius:99px; margin-bottom:8px;
+    background:var(--teal-light); color:var(--teal-dark);
+  }
+  .notice-item.important .notice-badge { background:var(--red-light); color:var(--red); }
+  .notice-title { font-size:15px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+  .notice-content { font-size:13px; color:var(--gray-d); line-height:1.6; }
+  .notice-date { font-size:11px; color:var(--gray); margin-top:8px; }
+
+  /* ── 직원 설정 모달 ── */
+  .modal-overlay {
+    position:fixed; inset:0; z-index:500;
+    background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);
+    display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity 0.3s;
+  }
+  .modal-overlay.show { opacity:1; pointer-events:all; }
+  .modal-sheet {
+    background:var(--white); width:100%; max-width:430px;
+    border-radius:24px 24px 0 0; padding:24px 20px 40px;
+    transform:translateY(100%); transition:transform 0.4s cubic-bezier(0.34,1.2,0.64,1);
+  }
+  .modal-overlay.show .modal-sheet { transform:translateY(0); }
+  .modal-handle {
+    width:40px; height:4px; background:var(--gray-l);
+    border-radius:99px; margin:0 auto 20px;
+  }
+  .modal-title { font-size:18px; font-weight:800; color:var(--navy); margin-bottom:20px; }
+
+  .input-group { margin-bottom:14px; }
+  .input-label { font-size:12px; font-weight:700; color:var(--gray-d); margin-bottom:6px; display:block; }
+  .input-field {
+    width:100%; padding:13px 16px; border-radius:12px;
+    border:1.5px solid var(--gray-l); font-size:15px; font-family:var(--font);
+    background:var(--gray-xl); color:var(--navy); outline:none;
+    transition:border-color 0.2s;
+  }
+  .input-field:focus { border-color:var(--teal); background:var(--white); }
+  .input-field:disabled {
+    background:var(--gray-xl); color:var(--gray-d);
+    border-color:var(--gray-l); cursor:not-allowed;
+  }
+  .input-hint { font-size:11px; color:var(--gray); margin-top:4px; }
+
+  .btn-primary {
+    width:100%; padding:16px; border-radius:14px; border:none;
+    background:linear-gradient(135deg, var(--teal-dark), var(--teal));
+    color:#fff; font-size:16px; font-weight:700; font-family:var(--font);
+    cursor:pointer; box-shadow:0 4px 16px rgba(42,171,142,0.35);
+    transition:all 0.2s; margin-top:8px;
+  }
+  .btn-primary:active { transform:scale(0.98); }
+
+  /* ── 출장지 선택 카드 ── */
+  .site-select-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 16px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: all 0.2s;
+    border: 2px solid var(--gray-l);
+  }
+  .site-select-card:active { transform: scale(0.98); }
+  .site-select-card.selected { border-color: var(--teal); background: var(--teal-light); }
+
+  .site-select-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--teal-light); display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .site-select-card.selected .site-select-icon { background: var(--teal); }
+  .site-select-card.selected .site-select-icon svg { stroke: #fff; }
+
+  .site-select-info { flex: 1; min-width: 0; }
+  .site-select-name { font-size: 15px; font-weight: 700; color: var(--navy); }
+  .site-select-sub  { font-size: 12px; color: var(--gray); margin-top: 2px; }
+  .site-select-card.selected .site-select-sub { color: var(--teal-dark); }
+
+  /* 출장지 모달 리스트 */
+  .site-search-wrap { margin-bottom: 14px; }
+
+  .site-list { max-height: 55vh; overflow-y: auto; }
+  .site-group-label {
+    font-size: 11px; font-weight: 700; color: var(--gray);
+    letter-spacing: 1px; padding: 12px 4px 6px; text-transform: uppercase;
+  }
+  .site-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 12px; border-radius: 12px; cursor: pointer;
+    transition: background 0.15s; margin-bottom: 4px;
+  }
+  .site-item:active, .site-item:hover { background: var(--gray-xl); }
+  .site-item.active { background: var(--teal-light); }
+
+  .site-item-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--gray-l); flex-shrink: 0;
+    border: 2px solid var(--gray);
+  }
+  .site-item.active .site-item-dot { background: var(--teal); border-color: var(--teal); }
+
+  .site-item-info { flex: 1; min-width: 0; }
+  .site-item-name { font-size: 15px; font-weight: 600; color: var(--navy); }
+  .site-item-addr { font-size: 12px; color: var(--gray); margin-top: 2px; }
+  .site-item.active .site-item-name { color: var(--teal-dark); }
+
+  .site-overseas-badge {
+    display:inline-block; background:#e8f4fd; color:#1a6fa8;
+    font-size:10px; font-weight:700; padding:1px 6px; border-radius:99px;
+    margin-left:4px; vertical-align:middle;
+  }
+  .site-item-check {
+    font-size: 18px; opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .site-item.active .site-item-check { opacity: 1; }
+
+  /* ── 출장지 선택 카드 ── */
+  .toast {
+    position:fixed; bottom:96px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--navy); color:#fff; padding:12px 20px; border-radius:12px;
+    font-size:13px; font-weight:600; white-space:nowrap;
+    opacity:0; pointer-events:none; z-index:999;
+    transition:all 0.3s ease; max-width:320px; text-align:center;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.success { background:var(--teal-dark); }
+  .toast.error { background:var(--red); }
+  .toast.warning { background:#d4890a; }
 </style>
 </head>
 <body>
 
+<!-- ═══ 스플래시 ═══ -->
 <div id="splash">
-  <div class="splash-ring"></div>
-  <div class="splash-logo">ETS</div>
-  <div class="splash-sub">출장 근태 시스템</div>
+  <div class="splash-logo">
+    <svg viewBox="0 0 54 54" fill="none">
+      <rect x="4" y="20" width="10" height="28" rx="3" fill="white" opacity="0.9"/>
+      <rect x="22" y="10" width="10" height="38" rx="3" fill="white"/>
+      <rect x="40" y="4" width="10" height="44" rx="3" fill="white" opacity="0.9"/>
+      <rect x="2" y="46" width="50" height="4" rx="2" fill="rgba(255,255,255,0.5)"/>
+    </svg>
+  </div>
+  <div class="splash-brand">이티에스</div>
+  <div class="splash-sub">ATTENDANCE SYSTEM</div>
+  <div class="splash-bar-wrap">
+    <div class="splash-bar" id="splashBar"></div>
+  </div>
+  <div class="splash-status" id="splashStatus">시스템 초기화 중...</div>
 </div>
 
-<div id="app" style="display:none">
+<!-- ═══ 메인 앱 ═══ -->
+<div id="app">
 
-  <!-- 헤더 -->
-  <div class="header">
-    <div class="header-brand">ETS 근태</div>
-    <div class="status-pill pill-off" id="statusPill">● 미출근</div>
-  </div>
-
-  <!-- 직원 정보 -->
-  <div class="setup-card">
-    <div class="setup-title">👤 직원 정보</div>
-    <div class="field">
-      <label>이름</label>
-      <input type="text" id="empName" placeholder="홍길동" maxlength="10">
-    </div>
-    <div class="field">
-      <label>부서</label>
-      <input type="text" id="empDept" placeholder="해외사업팀" maxlength="20">
-    </div>
-    <div class="field">
-      <label>고객사 선택</label>
-      <select id="siteSelect" onchange="onSiteChange()">
-        <option value="">-- 고객사를 선택하세요 --</option>
-        <option value="lges">LG에너지솔루션 오창 2공장</option>
-        <option value="ets">이티에스 본사</option>
-        <option value="asan">아산 배방 (테스트)</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- 고객사 위치 & 지도 -->
-  <div class="site-card" id="siteCard" style="display:none">
-    <div class="site-header">
-      <div>📍</div>
-      <div class="site-info">
-        <div class="site-name" id="siteName">-</div>
-        <div class="site-addr" id="siteAddr">-</div>
+  <!-- ── 홈 페이지 ── -->
+  <div class="page active" id="pageHome">
+    <div class="app-header">
+      <div class="header-top">
+        <div class="header-logo">
+          <div class="logo-box">
+            <svg viewBox="0 0 54 54" fill="none">
+              <rect x="4" y="20" width="10" height="28" rx="3" fill="white" opacity="0.9"/>
+              <rect x="22" y="10" width="10" height="38" rx="3" fill="white"/>
+              <rect x="40" y="4" width="10" height="44" rx="3" fill="white" opacity="0.9"/>
+            </svg>
+          </div>
+          <div class="logo-text">이티에스 <span>근태관리 시스템</span></div>
+        </div>
+        <button class="header-notice-btn" onclick="goPage('pageNotice')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <div class="notice-dot"></div>
+        </button>
       </div>
-      <div class="distance-badge dist-loading" id="distBadge">측정중...</div>
+
+      <div class="header-datetime">
+        <div class="datetime-date" id="headerDate">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.5">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+          </svg>
+          <span id="dateText">날짜 로딩 중...</span>
+        </div>
+        <div class="datetime-time" id="headerTime">
+          <span id="timeText">--:--:--</span>
+          <span class="midnight-badge" id="midnightBadge" style="display:none">자정이후</span>
+          <span class="local-badge" id="localTimeBadge" style="display:none">현지시간</span>
+        </div>
+      </div>
     </div>
-    <div id="map"></div>
+
+    <!-- 직원 카드 -->
+    <div class="emp-card" onclick="openEmpModal()">
+      <div class="emp-avatar" id="empAvatar">?</div>
+      <div class="emp-info">
+        <div class="emp-name" id="empName">이름을 등록하세요</div>
+        <div class="emp-meta" id="empMeta">탭하여 직원 정보 등록</div>
+      </div>
+      <div class="emp-badge" id="empPos">미등록</div>
+    </div>
+
+    <!-- 출장지 선택 섹션 -->
+    <div class="section">
+      <div class="section-title">🏢 출장지 선택</div>
+      <div class="site-select-card" id="siteSelectCard" onclick="openSiteModal()">
+        <div class="site-select-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2.5">
+            <circle cx="12" cy="10" r="4"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+          </svg>
+        </div>
+        <div class="site-select-info">
+          <div class="site-select-name" id="selectedSiteName">출장지를 선택하세요</div>
+          <div class="site-select-sub" id="selectedSiteSub">탭하여 고객사/출장지 선택</div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gray)" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 출퇴근 섹션 -->
+    <div class="section">
+      <div class="section-title">📍 현재 위치 확인</div>
+      <div class="location-card">
+        <div class="location-icon checking" id="locIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4890a" stroke-width="2.5">
+            <circle cx="12" cy="10" r="4"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+          </svg>
+        </div>
+        <div class="location-info">
+          <div class="location-name" id="locName">출장지를 먼저 선택해 주세요</div>
+          <div class="location-status checking" id="locStatus">출장지 미선택</div>
+        </div>
+      </div>
+
+      <div class="att-buttons">
+        <button class="att-btn checkin" onclick="handleCheckin()">
+          <div class="att-btn-icon">🟢</div>
+          <div class="att-btn-label">출근</div>
+          <div class="att-btn-time" id="checkinTime">--:--</div>
+        </button>
+        <button class="att-btn checkout" id="checkoutBtn" onclick="handleCheckout()">
+          <div class="att-btn-icon">🔴</div>
+          <div class="att-btn-label">퇴근</div>
+          <div class="att-btn-time" id="checkoutTime">--:--</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- 오늘 상태 -->
+    <div class="section">
+      <div class="section-title">📊 오늘 현황</div>
+      <div class="status-card">
+        <div class="status-row">
+          <div class="status-label">출근 시간</div>
+          <div class="status-value" id="todayCheckin">미출근</div>
+        </div>
+        <div class="status-row">
+          <div class="status-label">퇴근 시간</div>
+          <div class="status-value" id="todayCheckout">-</div>
+        </div>
+        <div class="status-row">
+          <div class="status-label">근무 시간</div>
+          <div class="status-value" id="todayWorkTime">-</div>
+        </div>
+        <div class="status-row">
+          <div class="status-label">출근 상태</div>
+          <div class="status-value tag tag-off" id="todayStatus">미출근</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- 출근 / 퇴근 버튼 -->
-  <div class="action-row">
-    <button class="btn-in" id="btnIn" onclick="doCheck('in')" disabled>
-      <span class="btn-icon">🟢</span>
-      <span>출근</span>
-      <span style="font-size:11px;opacity:0.8;">GPS 기록</span>
+  <!-- ── 이력 페이지 ── -->
+  <div class="page" id="pageHistory">
+    <div class="page-header">
+      <div class="page-header-title">출퇴근 이력</div>
+      <div class="page-header-sub">최근 1개월 기록</div>
+    </div>
+    <div class="history-filter">
+      <div class="filter-chip active">전체</div>
+      <div class="filter-chip">이번 주</div>
+      <div class="filter-chip">지각</div>
+      <div class="filter-chip">조기퇴근</div>
+      <div class="filter-chip">정상</div>
+    </div>
+    <div class="history-list" id="historyList">
+      <!-- 샘플 데이터 -->
+      <div class="history-item">
+        <div class="history-date">📅 2025년 1월 15일 (수)</div>
+        <div class="history-times">
+          <div class="history-time-box">
+            <div class="history-time-label">출근</div>
+            <div class="history-time-val">08:52</div>
+          </div>
+          <div class="history-time-box">
+            <div class="history-time-label">퇴근</div>
+            <div class="history-time-val">18:10</div>
+          </div>
+        </div>
+        <div class="history-footer">
+          <div class="history-work-time">순 근무시간 <strong>8시간 18분</strong></div>
+          <div class="status-value tag tag-ok">정상</div>
+        </div>
+      </div>
+      <div class="history-item">
+        <div class="history-date">📅 2025년 1월 14일 (화)</div>
+        <div class="history-times">
+          <div class="history-time-box">
+            <div class="history-time-label">출근</div>
+            <div class="history-time-val">09:14</div>
+          </div>
+          <div class="history-time-box">
+            <div class="history-time-label">퇴근</div>
+            <div class="history-time-val">18:05</div>
+          </div>
+        </div>
+        <div class="history-footer">
+          <div class="history-work-time">순 근무시간 <strong>7시간 51분</strong></div>
+          <div class="status-value tag tag-late">지각</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 통계 페이지 ── -->
+  <div class="page" id="pageStats">
+    <div class="page-header">
+      <div class="page-header-title">월간 통계</div>
+      <div class="page-header-sub" id="statsMonth">2025년 1월</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📅</div>
+        <div class="stat-value">18</div>
+        <div class="stat-label">출근일수</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏰</div>
+        <div class="stat-value">149h</div>
+        <div class="stat-label">총 근무시간</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🚨</div>
+        <div class="stat-value">2</div>
+        <div class="stat-label">지각 횟수</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value">16</div>
+        <div class="stat-label">정상 출근</div>
+      </div>
+      <div class="stat-card wide">
+        <div class="stat-icon">🕘</div>
+        <div>
+          <div class="stat-value">08:54</div>
+          <div class="stat-label">평균 출근 시간</div>
+        </div>
+      </div>
+      <div class="stat-card wide">
+        <div class="stat-icon">🕕</div>
+        <div>
+          <div class="stat-value">18:08</div>
+          <div class="stat-label">평균 퇴근 시간</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 공지 페이지 ── -->
+  <div class="page" id="pageNotice">
+    <div class="page-header">
+      <div class="page-header-title">공지사항</div>
+      <div class="page-header-sub">관리자 공지</div>
+    </div>
+    <div class="notice-list" id="noticeListEl">
+      <div class="notice-item important">
+        <div class="notice-badge">🔴 중요</div>
+        <div class="notice-title">1월 근태 마감 안내</div>
+        <div class="notice-content">이번 달 근태 자료는 1월 31일 18시까지 마감됩니다. 누락 없이 출퇴근 등록 부탁드립니다.</div>
+        <div class="notice-date">2025.01.15</div>
+      </div>
+      <div class="notice-item">
+        <div class="notice-badge">📢 공지</div>
+        <div class="notice-title">신규 출장지 등록 완료</div>
+        <div class="notice-content">B고객사 (경기도 성남시) 위치가 새로 등록되었습니다. 해당 현장 근무자분들은 확인 바랍니다.</div>
+        <div class="notice-date">2025.01.10</div>
+      </div>
+      <div class="notice-item">
+        <div class="notice-badge">📢 공지</div>
+        <div class="notice-title">근태관리 시스템 오픈</div>
+        <div class="notice-content">이티에스 근태관리 시스템이 정식 오픈되었습니다. 사용 중 문의사항은 관리자에게 연락해 주세요.</div>
+        <div class="notice-date">2025.01.02</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 하단 네비 ── -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="navHome" onclick="goPage('pageHome')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">홈</span>
     </button>
-    <button class="btn-out" id="btnOut" onclick="doCheck('out')" disabled>
-      <span class="btn-icon">🔴</span>
-      <span>퇴근</span>
-      <span style="font-size:11px;opacity:0.8;">GPS 기록</span>
+    <button class="nav-item" id="navHistory" onclick="goPage('pageHistory')">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">이력</span>
     </button>
-  </div>
-
-  <!-- 전송 상태 -->
-  <div class="send-status" id="sendStatus"></div>
-
-  <!-- 오늘 기록 -->
-  <div class="record-card">
-    <div class="card-title">📋 오늘 기록</div>
-    <div id="recordList"><div class="empty-msg">아직 기록이 없어요</div></div>
-  </div>
-
-  <!-- 안내 -->
-  <div class="notice">
-    ⚠️ <strong>출퇴근은 고객사 반경 500m 이내</strong>에서만 가능합니다.<br>
-    기록은 <strong>구글 시트</strong>에 자동 저장되어 관리자가 확인합니다.<br>
-    GPS 권한을 반드시 허용해 주세요.
-  </div>
-
+    <button class="nav-item" id="navStats" onclick="goPage('pageStats')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">통계</span>
+    </button>
+    <button class="nav-item" id="navNotice" onclick="goPage('pageNotice')">
+      <span class="nav-icon">📢</span>
+      <span class="nav-label">공지</span>
+    </button>
+  </nav>
 </div>
 
+<!-- ── 출장지 선택 모달 ── -->
+<div class="modal-overlay" id="siteModal" onclick="closeSiteModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">출장지 / 고객사 선택</div>
+    <div class="site-search-wrap">
+      <input class="input-field" id="siteSearch" type="text" placeholder="🔍  고객사명 검색..." oninput="filterSites(this.value)">
+    </div>
+    <div class="site-list" id="siteList"></div>
+  </div>
+</div>
+
+<!-- ── 직원 등록 모달 ── -->
+<div class="modal-overlay" id="empModal" onclick="closeEmpModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">직원 정보 등록</div>
+    <div class="input-group">
+      <label class="input-label">이름 *</label>
+      <input class="input-field" id="inputName" type="text" placeholder="실명을 입력하세요" maxlength="10">
+    </div>
+    <div class="input-group">
+      <label class="input-label">사번</label>
+      <input class="input-field" id="inputEmpNo" type="text" placeholder="이름 입력 시 자동 기입" disabled>
+      <div class="input-hint">※ 이름 입력 후 자동으로 조회됩니다</div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">직위</label>
+      <input class="input-field" id="inputPos" type="text" placeholder="자동 기입" disabled>
+    </div>
+    <div class="input-group">
+      <label class="input-label">부서</label>
+      <input class="input-field" id="inputDept" type="text" placeholder="자동 기입" disabled>
+    </div>
+    <button class="btn-primary" onclick="saveEmpInfo()">등록 완료</button>
+  </div>
+</div>
+
+<!-- 토스트 -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ════════════════════════════════════════════════
-//  ⚙️  설정 - 여기만 바꾸면 됩니다
-// ════════════════════════════════════════════════
-const SCRIPT_URL = "여기에_구글앱스스크립트_URL_붙여넣기";
+// ══════════════════════════════════════════
+//  구글 시트 연동 설정
+// ══════════════════════════════════════════
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw93Mbq6V7Wg6aAtS3rNaB-DfC6gGDZ_DXMP1GhJmX1QSTd-x_nTKbmCxrHVtxjReZOmg/exec';
 
-const SITES = {
-  asan: {
-    name: "아산 배방 (테스트)",
-    addr: "충청남도 아산시 배방읍 배방로 58-44",
-    lat: 36.7696594,
-    lng: 127.0490135,
-    radius: 500
-  },
-  lges: {
-    name: "LG에너지솔루션 오창 2공장",
-    addr: "충청북도 청주시 청원구 오창읍 2산단로 81",
-    lat: 36.7320487,
-    lng: 127.4444017,
-    radius: 500
-  },
-  ets: {
-    name: "이티에스 본사",
-    addr: "충청남도 아산시 음봉면 스마트산단로 91",
-    lat: 36.855861,
-    lng: 127.1026417,
-    radius: 500
+async function apiCall(params) {
+  const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  return await res.json();
+}
+
+// ══════════════════════════════════════════
+//  기기 ID 생성 (폰 고유번호)
+// ══════════════════════════════════════════
+function getDeviceId() {
+  let id = localStorage.getItem('ets_device_id');
+  if (!id) {
+    id = 'DEV_' + Date.now() + '_' + Math.random().toString(36).substr(2,9).toUpperCase();
+    localStorage.setItem('ets_device_id', id);
   }
-  // 고객사 추가 시 여기에 계속 추가
-};
-// ════════════════════════════════════════════════
+  return id;
+}
 
-let map, siteCircle, userMarker, siteMarker;
-let currentLat = null, currentLng = null;
+// ══════════════════════════════════════════
+//  출장지 DB (구글 시트에서 로드, 초기값)
+// ══════════════════════════════════════════
+let SITE_DB = [];
+
+// 위도/경도로 시간대 자동 판단
+function getTZFromCoords(lat, lng) {
+  // 대략적인 시간대 판단 (경도 기준)
+  if (lng >= 124 && lng <= 132 && lat >= 33 && lat <= 39) return 'Asia/Seoul';
+  if (lng >= 73  && lng <= 135 && lat >= 18 && lat <= 54) return 'Asia/Shanghai';
+  if (lng >= 129 && lng <= 146 && lat >= 30 && lat <= 46) return 'Asia/Tokyo';
+  if (lng >= -10 && lng <= 40)  return 'Europe/Warsaw';
+  if (lng >= -130 && lng <= -60 && lat >= 24 && lat <= 50) {
+    if (lng >= -80)  return 'America/New_York';
+    if (lng >= -100) return 'America/Chicago';
+    if (lng >= -115) return 'America/Denver';
+    return 'America/Los_Angeles';
+  }
+  return 'UTC';
+}
+
+function getFlagFromTZ(tz) {
+  if (tz.includes('Seoul') || tz.includes('Korea'))  return '🇰🇷';
+  if (tz.includes('Shanghai') || tz.includes('China')) return '🇨🇳';
+  if (tz.includes('Tokyo'))   return '🇯🇵';
+  if (tz.includes('America')) return '🇺🇸';
+  if (tz.includes('Warsaw'))  return '🇵🇱';
+  if (tz.includes('Budapest'))return '🇭🇺';
+  return '🌐';
+}
+
+function getCountryFromTZ(tz) {
+  if (tz.includes('Seoul'))    return '대한민국';
+  if (tz.includes('Shanghai')) return '중국';
+  if (tz.includes('Tokyo'))    return '일본';
+  if (tz.includes('New_York')) return '미국 (동부)';
+  if (tz.includes('Chicago'))  return '미국 (중부)';
+  if (tz.includes('Denver'))   return '미국 (산악)';
+  if (tz.includes('Los_Angeles')) return '미국 (서부)';
+  if (tz.includes('Warsaw'))   return '폴란드';
+  if (tz.includes('Budapest')) return '헝가리';
+  return '해외';
+}
+
+async function loadSites() {
+  try {
+    const result = await apiCall({ action: 'getSites' });
+    if (result.success && result.data.length > 0) {
+      SITE_DB = result.data.map((s, idx) => {
+        const lat = parseFloat(s['위도']);
+        const lng = parseFloat(s['경도']);
+        const tz  = getTZFromCoords(lat, lng);
+        return {
+          id:      'site_' + idx,
+          name:    s['이름'],
+          addr:    s['주소'] || '',
+          lat,
+          lng,
+          radius:  parseInt(s['반경']) || 500,
+          tz,
+          flag:    getFlagFromTZ(tz),
+          country: getCountryFromTZ(tz),
+          shift:   s['교대유형'] || '1교대',
+          shift1Start: s['1교대시작'] || '09:00',
+          shift1End:   s['1교대종료'] || '18:00',
+          shift2Start: s['2교대시작'] || '',
+          shift2End:   s['2교대종료'] || '',
+        };
+      });
+    }
+  } catch(e) {
+    console.log('출장지 로드 실패, 기본값 사용');
+  }
+}
+
+async function loadNotices() {
+  try {
+    const result = await apiCall({ action: 'getNotices' });
+    if (result.success && result.data.length > 0) {
+      const list = document.getElementById('noticeListEl');
+      if (!list) return;
+      list.innerHTML = result.data.map(n => `
+        <div class="notice-item ${n['중요여부']==='Y'?'important':''}">
+          <div class="notice-badge">${n['중요여부']==='Y'?'🔴 중요':'📢 공지'}</div>
+          <div class="notice-title">${n['제목']}</div>
+          <div class="notice-content">${n['내용']}</div>
+          <div class="notice-date">${n['날짜']}</div>
+        </div>`).join('');
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════
+//  직원 정보 (구글 시트 연동)
+// ══════════════════════════════════════════
+let empLocked = false;
+let currentEmp = null;
+
+async function loadEmpInfo() {
+  const deviceId = getDeviceId();
+
+  // 1. 로컬에 저장된 정보 있으면 먼저 표시
+  const saved = localStorage.getItem('ets_emp');
+  if (saved) {
+    currentEmp = JSON.parse(saved);
+    empLocked = true;
+    updateEmpUI(currentEmp);
+  }
+
+  // 2. 구글 시트에서 기기ID로 확인
+  try {
+    const result = await apiCall({ action:'checkDevice', deviceId });
+    if (result.success) {
+      currentEmp = {
+        name:  result.data['이름'],
+        empNo: result.data['사번'],
+        pos:   result.data['직위'],
+        dept:  result.data['부서'],
+      };
+      localStorage.setItem('ets_emp', JSON.stringify(currentEmp));
+      empLocked = true;
+      updateEmpUI(currentEmp);
+    }
+  } catch(e) {}
+}
+
+function updateEmpUI(emp) {
+  document.getElementById('empAvatar').textContent = emp.name ? emp.name[0] : '?';
+  document.getElementById('empName').textContent = emp.name;
+  document.getElementById('empMeta').textContent = `${emp.dept} · 사번 ${emp.empNo}`;
+  document.getElementById('empPos').textContent = emp.pos;
+}
+
+function openEmpModal() {
+  if (empLocked) { showToast('직원 정보는 관리자만 변경할 수 있습니다', 'warning'); return; }
+  document.getElementById('empModal').classList.add('show');
+  document.getElementById('inputName').focus();
+}
+
+function closeEmpModal(e) {
+  if (e && e.target !== document.getElementById('empModal')) return;
+  document.getElementById('empModal').classList.remove('show');
+}
+
+// 이름 입력 시 구글 시트에서 자동 조회
+document.getElementById('inputName').addEventListener('input', async function() {
+  const name = this.value.trim();
+  if (name.length < 2) return;
+  try {
+    const result = await apiCall({ action:'getEmployees' });
+    if (result.success) {
+      const emp = result.data.find(e => e['이름'] === name);
+      if (emp) {
+        document.getElementById('inputEmpNo').value = emp['사번'];
+        document.getElementById('inputPos').value   = emp['직위'];
+        document.getElementById('inputDept').value  = emp['부서'];
+      } else {
+        document.getElementById('inputEmpNo').value = '';
+        document.getElementById('inputPos').value   = '';
+        document.getElementById('inputDept').value  = '';
+      }
+    }
+  } catch(e) {}
+});
+
+async function saveEmpInfo() {
+  const name = document.getElementById('inputName').value.trim();
+  const empNo = document.getElementById('inputEmpNo').value;
+  if (!name)  { showToast('이름을 입력해 주세요', 'error'); return; }
+  if (!empNo) { showToast('등록되지 않은 직원입니다.\n관리자에게 문의하세요', 'error'); return; }
+
+  showToast('등록 중...', '');
+  try {
+    const deviceId = getDeviceId();
+    const result = await apiCall({
+      action: 'registerDevice',
+      name,
+      deviceId
+    });
+    if (result.success) {
+      currentEmp = {
+        name:  result.data['이름'],
+        empNo: result.data['사번'],
+        pos:   result.data['직위'],
+        dept:  result.data['부서'],
+      };
+      localStorage.setItem('ets_emp', JSON.stringify(currentEmp));
+      empLocked = true;
+      updateEmpUI(currentEmp);
+      document.getElementById('empModal').classList.remove('show');
+      showToast(`${name}님, 등록 완료되었습니다 ✓`, 'success');
+    } else {
+      showToast(result.message || '등록 실패', 'error');
+    }
+  } catch(e) {
+    showToast('네트워크 오류. 다시 시도해 주세요', 'error');
+  }
+}
+
+// ══════════════════════════════════════════
+//  출퇴근 (구글 시트 연동)
+// ══════════════════════════════════════════
+async function handleCheckin() {
+  if (!currentEmp) { showToast('먼저 직원 정보를 등록해 주세요', 'warning'); return; }
+  if (!selectedSite) { showToast('출장지를 먼저 선택해 주세요 🏢', 'warning'); return; }
+  if (!locationOk)   { showToast('출퇴근 가능 구역이 아닙니다 📍', 'error'); return; }
+
+  const today = getTodayKey();
+  const now   = getNowStr();
+
+  // 지각 여부 판단
+  const shiftStart = selectedShift === '2교대'
+    ? selectedSite.shift2Start
+    : selectedSite.shift1Start;
+  const isLate = shiftStart ? compareTime(now, shiftStart) > 0 : false;
+  const status = isLate ? '지각' : '정상';
+
+  showToast('출근 처리 중...', '');
+  try {
+    const result = await apiCall({
+      action: 'checkin',
+      name:   currentEmp.name,
+      empNo:  currentEmp.empNo,
+      pos:    currentEmp.pos,
+      dept:   currentEmp.dept,
+      site:   selectedSite.name,
+      date:   today,
+      time:   now,
+      status,
+    });
+    if (result.success) {
+      // 로컬에도 저장 (오프라인 대비)
+      const rec = getRecord(today);
+      rec.checkin = now;
+      rec.site = selectedSite.name;
+      saveRecord(today, rec);
+      document.getElementById('todayCheckin').textContent = now;
+      document.getElementById('checkinTime').textContent = now;
+      document.getElementById('todayStatus').textContent = status;
+      document.getElementById('todayStatus').className =
+        'status-value tag ' + (isLate ? 'tag-late' : 'tag-ok');
+      showToast(`출근 완료 ✓  ${now} · ${selectedSite.name}`, 'success');
+    } else {
+      showToast(result.message || '출근 처리 실패', 'error');
+    }
+  } catch(e) {
+    showToast('네트워크 오류. 다시 시도해 주세요', 'error');
+  }
+}
+
+async function handleCheckout() {
+  if (!currentEmp) { showToast('먼저 직원 정보를 등록해 주세요', 'warning'); return; }
+  if (!selectedSite) { showToast('출장지를 먼저 선택해 주세요 🏢', 'warning'); return; }
+  if (!locationOk)   { showToast('출퇴근 가능 구역이 아닙니다 📍', 'error'); return; }
+
+  const today = getTodayKey();
+  const now   = getNowStr();
+  const rec   = getRecord(today);
+  if (!rec.checkin) { showToast('출근 기록이 없습니다', 'warning'); return; }
+
+  showToast('퇴근 처리 중...', '');
+  try {
+    const result = await apiCall({
+      action: 'checkout',
+      name:   currentEmp.name,
+      date:   today,
+      time:   now,
+    });
+    if (result.success) {
+      rec.checkout = now;
+      saveRecord(today, rec);
+      document.getElementById('todayCheckout').textContent = now;
+      document.getElementById('checkoutTime').textContent = now;
+      if (result.workTime) {
+        document.getElementById('todayWorkTime').textContent = result.workTime;
+      }
+      showToast(`퇴근 완료 ✓  ${now} (최종 퇴근시간 업데이트)`, 'success');
+    } else {
+      showToast(result.message || '퇴근 처리 실패', 'error');
+    }
+  } catch(e) {
+    showToast('네트워크 오류. 다시 시도해 주세요', 'error');
+  }
+}
+
+// ══════════════════════════════════════════
+//  이력 조회 (구글 시트)
+// ══════════════════════════════════════════
+async function loadHistory() {
+  if (!currentEmp) return;
+  try {
+    const result = await apiCall({ action:'getHistory', name:currentEmp.name });
+    if (result.success) {
+      const list = document.getElementById('historyList');
+      if (result.data.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray)">출퇴근 기록이 없습니다</div>';
+        return;
+      }
+      list.innerHTML = result.data.map(r => {
+        const isLate = r['상태'] === '지각';
+        return `
+        <div class="history-item">
+          <div class="history-date">📅 ${r['날짜']}</div>
+          <div class="history-times">
+            <div class="history-time-box">
+              <div class="history-time-label">출근</div>
+              <div class="history-time-val">${r['출근시간'] || '-'}</div>
+            </div>
+            <div class="history-time-box">
+              <div class="history-time-label">퇴근</div>
+              <div class="history-time-val">${r['퇴근시간'] || '-'}</div>
+            </div>
+          </div>
+          <div class="history-footer">
+            <div class="history-work-time">순 근무시간 <strong>${r['근무시간'] || '-'}</strong></div>
+            <div class="status-value tag ${isLate?'tag-late':'tag-ok'}">${r['상태'] || '정상'}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════
+//  교대 선택
+// ══════════════════════════════════════════
+let selectedShift = '1교대';
+
+// ══════════════════════════════════════════
+//  유틸
+// ══════════════════════════════════════════
+function getTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getNowStr() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function getRecord(key) {
+  const s = localStorage.getItem('ets_att_'+key);
+  return s ? JSON.parse(s) : {};
+}
+function saveRecord(key, rec) {
+  localStorage.setItem('ets_att_'+key, JSON.stringify(rec));
+}
+function compareTime(t1, t2) {
+  const toMin = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
+  return toMin(t1) - toMin(t2);
+}
+function calcWorkMinutes(cin, cout) {
+  const toMin = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
+  let total = toMin(cout) - toMin(cin);
+  const lunchStart=12*60, lunchEnd=13*60;
+  const cinMin=toMin(cin), coutMin=toMin(cout);
+  if (cinMin < lunchEnd && coutMin > lunchStart) {
+    total -= Math.max(0, Math.min(coutMin,lunchEnd) - Math.max(cinMin,lunchStart));
+  }
+  return Math.max(0, total);
+}
+function updateStatus(rec) {
+  if (!rec.checkin) return;
+  const shiftStart = selectedSite?.shift1Start || '09:00';
+  const isLate = compareTime(rec.checkin, shiftStart) > 0;
+  const statusEl = document.getElementById('todayStatus');
+  statusEl.textContent = isLate ? '지각' : '정상';
+  statusEl.className = isLate ? 'status-value tag tag-late' : 'status-value tag tag-ok';
+  if (rec.checkin && rec.checkout) {
+    const workMin = calcWorkMinutes(rec.checkin, rec.checkout);
+    document.getElementById('todayWorkTime').textContent =
+      Math.floor(workMin/60) + '시간 ' + (workMin%60) + '분';
+  }
+}
+
+// ══════════════════════════════════════════
+//  출장지 DB (샘플 - 나중에 구글시트로 교체)
+// ══════════════════════════════════════════
+const SITE_DB = [
+  // ── 국내 ─────────────────────────────────────────────────────
+  // LG에너지솔루션 국내
+  { id:'lges_oc1', group:'LG에너지솔루션 (국내)', name:'LG에너지솔루션 오창 1공장', addr:'충북 청주시 청원구 오창읍', lat:36.7272, lng:127.4530, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
+  { id:'lges_oc2', group:'LG에너지솔루션 (국내)', name:'LG에너지솔루션 오창 2공장', addr:'충북 청주시 청원구 오창읍', lat:36.7310, lng:127.4560, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
+  { id:'lges_gm',  group:'LG에너지솔루션 (국내)', name:'LG에너지솔루션 광명 사업장', addr:'경기도 광명시',           lat:37.4570, lng:126.8650, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
+  // 삼성SDI 국내
+  { id:'sdi_ch',   group:'삼성SDI (국내)',        name:'삼성SDI 천안사업장',        addr:'충남 천안시 서북구',      lat:36.8560, lng:127.1480, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
+  { id:'sdi_ul',   group:'삼성SDI (국내)',        name:'삼성SDI 울산사업장',        addr:'울산광역시 울주군',       lat:35.5390, lng:129.3090, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
+  // SK온 국내
+  { id:'sko_sf',   group:'SK온 (국내)',           name:'SK온 서산배터리공장',       addr:'충남 서산시 대산읍',      lat:36.9920, lng:126.4540, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
+
+  // ── 해외 ─────────────────────────────────────────────────────
+  // LG에너지솔루션 미국
+  { id:'lges_us_hl', group:'LG에너지솔루션 (미국)', name:'LG에너지솔루션 홀랜드 공장',    addr:'Michigan, Holland, USA',      lat:42.7875, lng:-86.1089, radius:500, flag:'🇺🇸', country:'미국 (중부)', tz:'America/Chicago' },
+  { id:'lges_us_az', group:'LG에너지솔루션 (미국)', name:'LG에너지솔루션 퀸크릭 공장',    addr:'Arizona, Queen Creek, USA',   lat:33.2481, lng:-111.6341, radius:500, flag:'🇺🇸', country:'미국 (산악)', tz:'America/Phoenix' },
+  // 삼성SDI 미국
+  { id:'sdi_us_in',  group:'삼성SDI (미국)',        name:'삼성SDI 뉴칼라일 공장',         addr:'Indiana, New Carlisle, USA',  lat:41.7003, lng:-86.5197, radius:500, flag:'🇺🇸', country:'미국 (동부)', tz:'America/New_York' },
+  // LG에너지솔루션 유럽
+  { id:'lges_pl',    group:'LG에너지솔루션 (유럽)', name:'LG에너지솔루션 브로츠와프 공장', addr:'Wrocław, Poland',             lat:51.0988, lng:16.9436, radius:500, flag:'🇵🇱', country:'폴란드',     tz:'Europe/Warsaw' },
+  // 삼성SDI 유럽
+  { id:'sdi_hu',     group:'삼성SDI (유럽)',        name:'삼성SDI 괴드 공장',             addr:'Göd, Hungary',                lat:47.6989, lng:19.1303, radius:500, flag:'🇭🇺', country:'헝가리',     tz:'Europe/Budapest' },
+  // LG에너지솔루션 중국
+  { id:'lges_cn_nj', group:'LG에너지솔루션 (중국)', name:'LG에너지솔루션 난징 공장',      addr:'Nanjing, China',              lat:32.0603, lng:118.7969, radius:500, flag:'🇨🇳', country:'중국',       tz:'Asia/Shanghai' },
+  // 이티에스 본사
+  { id:'hq',         group:'이티에스 본사',         name:'이티에스 본사',                 addr:'(본사 주소)',                  lat:37.5000, lng:127.0000, radius:500, flag:'🇰🇷', country:'대한민국', tz:'Asia/Seoul' },
+];
+
 let selectedSite = null;
-let isCheckedIn = false;
-let watchId = null;
-let records = JSON.parse(localStorage.getItem('ets_rec') || '[]');
 
-// 스플래시
-setTimeout(() => {
-  document.getElementById('splash').classList.add('hide');
-  document.getElementById('app').style.display = 'block';
-  initMap();
-  loadSavedInfo();
-  loadTodayRecords();
-}, 2000);
-
-function loadSavedInfo() {
-  const saved = JSON.parse(localStorage.getItem('ets_emp') || '{}');
-  if (saved.name) document.getElementById('empName').value = saved.name;
-  if (saved.dept) document.getElementById('empDept').value = saved.dept;
-  if (saved.site) {
-    document.getElementById('siteSelect').value = saved.site;
-    onSiteChange();
-  }
-  const todayStatus = getTodayStatus();
-  if (todayStatus === 'in') {
-    isCheckedIn = true;
-    setButtonState('working');
-    updateStatusPill('on');
-  } else if (todayStatus === 'done') {
-    setButtonState('done');
-    updateStatusPill('done');
-  }
+// ══════════════════════════════════════════
+//  출장지 모달
+// ══════════════════════════════════════════
+function openSiteModal() {
+  renderSiteList('');
+  document.getElementById('siteSearch').value = '';
+  document.getElementById('siteModal').classList.add('show');
 }
-
-function initMap() {
-  map = L.map('map', { zoomControl:false, attributionControl:false }).setView([36.7696594, 127.0490135], 14);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(map);
+function closeSiteModal(e) {
+  if (e && e.target !== document.getElementById('siteModal')) return;
+  document.getElementById('siteModal').classList.remove('show');
 }
+function filterSites(q) { renderSiteList(q); }
 
-function onSiteChange() {
-  const val = document.getElementById('siteSelect').value;
-  if (!val) { document.getElementById('siteCard').style.display = 'none'; stopWatch(); return; }
-  selectedSite = SITES[val];
-  document.getElementById('siteCard').style.display = 'block';
-  document.getElementById('siteName').textContent = selectedSite.name;
-  document.getElementById('siteAddr').textContent = selectedSite.addr;
+function renderSiteList(q) {
+  const list = document.getElementById('siteList');
+  const filtered = q
+    ? SITE_DB.filter(s => s.name.includes(q) || s.group.includes(q) || s.addr.includes(q))
+    : SITE_DB;
 
-  // 저장
-  const emp = { name: document.getElementById('empName').value, dept: document.getElementById('empDept').value, site: val };
-  localStorage.setItem('ets_emp', JSON.stringify(emp));
+  // 그룹별 분류
+  const groups = {};
+  filtered.forEach(s => {
+    if (!groups[s.group]) groups[s.group] = [];
+    groups[s.group].push(s);
+  });
 
-  // 지도 세팅
-  map.setView([selectedSite.lat, selectedSite.lng], 15);
-  if (siteMarker) map.removeLayer(siteMarker);
-  if (siteCircle) map.removeLayer(siteCircle);
-
-  siteMarker = L.marker([selectedSite.lat, selectedSite.lng], {
-    icon: L.divIcon({ html:'<div style="background:#1A6FFF;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px #1A6FFF;"></div>', iconSize:[14,14], iconAnchor:[7,7] })
-  }).bindPopup(`📍 ${selectedSite.name}`).addTo(map);
-
-  siteCircle = L.circle([selectedSite.lat, selectedSite.lng], {
-    radius: selectedSite.radius, color:'#1A6FFF', fillColor:'#1A6FFF', fillOpacity:0.08, weight:2
-  }).addTo(map);
-
-  startWatch();
-}
-
-function startWatch() {
-  if (watchId) navigator.geolocation.clearWatch(watchId);
-  if (!navigator.geolocation) { showToast('❌ GPS를 지원하지 않는 기기입니다'); return; }
-  watchId = navigator.geolocation.watchPosition(onPos, onPosErr, { enableHighAccuracy:true, maximumAge:10000 });
-}
-function stopWatch() { if (watchId) { navigator.geolocation.clearWatch(watchId); watchId=null; } }
-
-function onPos(pos) {
-  currentLat = pos.coords.latitude;
-  currentLng = pos.coords.longitude;
-  if (!selectedSite) return;
-
-  // 사용자 마커 업데이트
-  if (userMarker) map.removeLayer(userMarker);
-  userMarker = L.circleMarker([currentLat, currentLng], {
-    radius:8, fillColor:'#00E5A0', color:'white', weight:2, fillOpacity:1
-  }).addTo(map);
-
-  const dist = calcDist(currentLat, currentLng, selectedSite.lat, selectedSite.lng);
-  const distText = dist < 1000 ? `${Math.round(dist)}m` : `${(dist/1000).toFixed(1)}km`;
-  const within = dist <= selectedSite.radius;
-
-  const badge = document.getElementById('distBadge');
-  badge.textContent = within ? `✅ ${distText} (출퇴근 가능)` : `⛔ ${distText} (범위 초과)`;
-  badge.className = 'distance-badge ' + (within ? 'dist-ok' : 'dist-far');
-
-  // 버튼 활성화 여부
-  const todayStatus = getTodayStatus();
-  if (within && todayStatus === 'none') {
-    document.getElementById('btnIn').disabled = false;
-  } else if (within && todayStatus === 'in') {
-    document.getElementById('btnOut').disabled = false;
-  }
-  if (!within) {
-    document.getElementById('btnIn').disabled = true;
-    document.getElementById('btnOut').disabled = true;
-  }
-}
-function onPosErr() {
-  document.getElementById('distBadge').textContent = '❌ GPS 오류';
-  document.getElementById('distBadge').className = 'distance-badge dist-far';
-  showToast('⚠️ GPS 권한을 허용해 주세요');
-}
-
-// 출퇴근 처리
-function doCheck(type) {
-  const name = document.getElementById('empName').value.trim();
-  const dept = document.getElementById('empDept').value.trim();
-  if (!name) { showToast('⚠️ 이름을 입력해주세요'); return; }
-  if (!selectedSite) { showToast('⚠️ 고객사를 선택해주세요'); return; }
-  if (!currentLat) { showToast('⚠️ GPS 위치를 확인 중입니다'); return; }
-
-  const now = new Date();
-  const krTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-  const record = {
-    type, name, dept,
-    site: selectedSite.name,
-    addr: selectedSite.addr,
-    lat: currentLat.toFixed(6),
-    lng: currentLng.toFixed(6),
-    date: krTime.toLocaleDateString('ko-KR'),
-    time: krTime.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }),
-    timestamp: now.toISOString()
-  };
-
-  records.push(record);
-  localStorage.setItem('ets_rec', JSON.stringify(records));
-
-  if (type === 'in') {
-    isCheckedIn = true;
-    setButtonState('working');
-    updateStatusPill('on');
-    showToast('✅ 출근이 기록되었습니다');
-  } else {
-    setButtonState('done');
-    updateStatusPill('done');
-    showToast('🔴 퇴근이 기록되었습니다');
-  }
-  loadTodayRecords();
-  sendToSheet(record);
-}
-
-// 구글 시트 전송
-function sendToSheet(record) {
-  if (SCRIPT_URL === "여기에_구글앱스스크립트_URL_붙여넣기") {
-    showSendStatus('⚠️ 구글 시트 URL 미설정 (로컬 저장만 완료)', 'fail');
+  if (Object.keys(groups).length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray);font-size:14px;">검색 결과가 없습니다</div>';
     return;
   }
-  showSendStatus('📤 서버 전송 중...', 'loading');
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(record)
-  })
-  .then(() => showSendStatus('✅ 구글 시트에 저장 완료!', 'ok'))
-  .catch(() => {
-    showSendStatus('⚠️ 전송 실패 - 로컬 저장됨 (재연결 시 재전송)', 'fail');
-  });
+
+  let html = '';
+  for (const [group, sites] of Object.entries(groups)) {
+    html += `<div class="site-group-label">${sites[0].flag} ${group}</div>`;
+    sites.forEach(s => {
+      const isActive = selectedSite && selectedSite.id === s.id;
+      const isOverseas = s.tz !== 'Asia/Seoul';
+      html += `
+        <div class="site-item ${isActive?'active':''}" onclick="selectSite('${s.id}')">
+          <div class="site-item-dot"></div>
+          <div class="site-item-info">
+            <div class="site-item-name">${s.name}</div>
+            <div class="site-item-addr">${s.addr}${isOverseas ? ` <span class="site-overseas-badge">해외 현지시간</span>` : ''}</div>
+          </div>
+          <div class="site-item-check">✓</div>
+        </div>`;
+    });
+  }
+  list.innerHTML = html;
 }
 
-// 오늘 기록 표시
-function loadTodayRecords() {
-  const today = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})).toLocaleDateString('ko-KR');
-  const todayRecs = records.filter(r => r.date === today);
-  const el = document.getElementById('recordList');
-  if (!todayRecs.length) { el.innerHTML = '<div class="empty-msg">아직 기록이 없어요</div>'; return; }
-  el.innerHTML = todayRecs.map(r => `
-    <div class="rec-row">
-      <div class="rec-dot ${r.type==='in'?'dot-in':'dot-out'}"></div>
-      <div class="rec-body">
-        <div class="rec-type">${r.type==='in'?'출근':'퇴근'} — ${r.site}</div>
-        <div class="rec-meta">📍 ${r.lat}, ${r.lng}</div>
-      </div>
-      <div class="rec-time">${r.time}</div>
-    </div>`).join('');
+function selectSite(siteId) {
+  selectedSite = SITE_DB.find(s => s.id === siteId);
+  if (!selectedSite) return;
+
+  // 카드 UI 업데이트
+  const card = document.getElementById('siteSelectCard');
+  card.classList.add('selected');
+  document.getElementById('selectedSiteName').textContent =
+    `${selectedSite.flag}  ${selectedSite.name}`;
+  document.getElementById('selectedSiteSub').textContent =
+    `${selectedSite.addr} · ${selectedSite.country}`;
+
+  // ★ 시간대 전환
+  setClockTZ(selectedSite.tz);
+
+  // 모달 닫기
+  document.getElementById('siteModal').classList.remove('show');
+
+  // 위치 재확인
+  setLocUI('checking', '위치 확인 중...', `${selectedSite.name} 반경 ${selectedSite.radius}m 확인 중`);
+  if (lastCoords) {
+    checkLocation(lastCoords.lat, lastCoords.lng);
+  } else {
+    startLocationWatch();
+  }
+
+  // 해외 시간대 안내 토스트
+  const isOverseas = selectedSite.tz !== 'Asia/Seoul';
+  if (isOverseas) {
+    showToast(`${selectedSite.flag} ${selectedSite.country} 현지 시간으로 전환됩니다`, 'success');
+  } else {
+    showToast(`${selectedSite.name} 선택됨`, 'success');
+  }
 }
 
-// 유틸
-function getTodayStatus() {
-  const today = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})).toLocaleDateString('ko-KR');
-  const t = records.filter(r=>r.date===today);
-  const hasIn = t.some(r=>r.type==='in');
-  const hasOut = t.some(r=>r.type==='out');
-  if (hasIn && hasOut) return 'done';
-  if (hasIn) return 'in';
-  return 'none';
+
+// ══════════════════════════════════════════
+//  스플래시
+// ══════════════════════════════════════════
+(function runSplash() {
+  const bar    = document.getElementById('splashBar');
+  const status = document.getElementById('splashStatus');
+
+  function hideSplash() {
+    const splash = document.getElementById('splash');
+    splash.classList.add('hide');
+    setTimeout(() => {
+      splash.style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      initApp(); // 스플래시 완전히 숨긴 후 앱 초기화
+    }, 500);
+  }
+
+  // 스플래시는 단순 2초 애니메이션만 - 구글시트 연동과 완전히 분리
+  let pct = 0;
+  const timer = setInterval(() => {
+    pct += 20;
+    bar.style.width = pct + '%';
+    if (pct === 20)  status.textContent = '시스템 초기화 중...';
+    if (pct === 60)  status.textContent = '데이터 로딩 중...';
+    if (pct === 100) {
+      clearInterval(timer);
+      status.textContent = '준비 완료 ✓';
+      setTimeout(hideSplash, 300);
+    }
+  }, 300);
+})();
+
+// ══════════════════════════════════════════
+//  앱 초기화
+// ══════════════════════════════════════════
+function initApp() {
+  startClock();
+  startLocationWatch();
+
+  // 구글 시트 연동은 백그라운드에서 처리 (앱 실행 막지 않음)
+  setTimeout(() => {
+    loadSites().catch(e => console.log('출장지 로드 실패'));
+    loadEmpInfo().catch(e => console.log('직원정보 로드 실패'));
+    loadNotices().catch(e => console.log('공지 로드 실패'));
+  }, 100);
+
+  // 오늘 기록 복원 (로컬)
+  const today = getTodayKey();
+  const rec = getRecord(today);
+  if (rec.checkin) {
+    document.getElementById('todayCheckin').textContent = rec.checkin;
+    document.getElementById('checkinTime').textContent = rec.checkin;
+  }
+  if (rec.checkout) {
+    document.getElementById('todayCheckout').textContent = rec.checkout;
+    document.getElementById('checkoutTime').textContent = rec.checkout;
+  }
+  if (rec.checkin) updateStatus(rec);
 }
-function setButtonState(state) {
-  const bi = document.getElementById('btnIn'), bo = document.getElementById('btnOut');
-  if (state==='working') { bi.disabled=true; bo.disabled=false; }
-  else if (state==='done') { bi.disabled=true; bo.disabled=true; }
-  else { bi.disabled=false; bo.disabled=true; }
+
+// ══════════════════════════════════════════
+//  시계 (현지시간 기반)
+// ══════════════════════════════════════════
+let clockInterval = null;
+let currentTZ = 'Asia/Seoul'; // 기본값: 한국
+
+function startClock() {
+  if (clockInterval) clearInterval(clockInterval);
+  function update() {
+    const tz = currentTZ;
+    const now = new Date();
+
+    // 해당 timezone의 현지 시간 파싱
+    const parts = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: tz,
+      year:'numeric', month:'numeric', day:'numeric',
+      weekday:'short', hour:'numeric', minute:'numeric', second:'numeric',
+      hour12: false
+    }).formatToParts(now);
+
+    const get = type => parts.find(p => p.type === type)?.value ?? '';
+    const year    = get('year');
+    const month   = get('month');
+    const day     = get('day');
+    const weekday = get('weekday').replace('요일','');
+    const hour    = String(get('hour')).padStart(2,'0');
+    const min     = String(get('minute')).padStart(2,'0');
+    const sec     = String(get('second')).padStart(2,'0');
+    const h       = parseInt(hour, 10);
+    const isMidnight = (h >= 0 && h < 6);
+
+    // 날짜 표시 (국가 정보 포함)
+    const site = selectedSite;
+    const locationLabel = site
+      ? ` · ${site.flag} ${site.country}`
+      : '';
+    document.getElementById('dateText').textContent =
+      `${year}년 ${month}월 ${day}일 ${weekday}요일${locationLabel}`;
+
+    // 시간 표시
+    document.getElementById('timeText').textContent = `${hour}:${min}:${sec}`;
+
+    // 자정이후 뱃지
+    const badge = document.getElementById('midnightBadge');
+    badge.style.display = isMidnight ? 'inline-block' : 'none';
+
+    // 해외일 때 "현지시간" 뱃지 표시
+    const localBadge = document.getElementById('localTimeBadge');
+    if (localBadge) {
+      localBadge.style.display = (tz !== 'Asia/Seoul') ? 'inline-block' : 'none';
+    }
+
+    // 통계 페이지 월 표시
+    document.getElementById('statsMonth').textContent = `${year}년 ${month}월`;
+  }
+  update();
+  clockInterval = setInterval(update, 1000);
 }
-function updateStatusPill(state) {
-  const p = document.getElementById('statusPill');
-  if (state==='on') { p.className='status-pill pill-on'; p.textContent='● 근무중'; }
-  else if (state==='done') { p.className='status-pill pill-done'; p.textContent='● 퇴근완료'; }
-  else { p.className='status-pill pill-off'; p.textContent='● 미출근'; }
+
+function setClockTZ(tz) {
+  currentTZ = tz || 'Asia/Seoul';
+  startClock(); // 즉시 갱신
 }
-function showSendStatus(msg, type) {
-  const el = document.getElementById('sendStatus');
-  el.textContent = msg;
-  el.className = 'send-status ' + (type==='ok'?'send-ok':'send-fail');
-  el.style.display = 'block';
-  if (type==='ok') setTimeout(()=>el.style.display='none', 4000);
+
+// ══════════════════════════════════════════
+//  위치 서비스
+// ══════════════════════════════════════════
+let currentSite = null;
+let locationOk = false;
+let lastCoords = null;
+
+function startLocationWatch() {
+  if (!navigator.geolocation) {
+    setLocUI('fail', '위치 서비스 미지원', '이 기기에서는 GPS를 사용할 수 없습니다');
+    return;
+  }
+  navigator.geolocation.watchPosition(
+    pos => {
+      lastCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      checkLocation(lastCoords.lat, lastCoords.lng);
+    },
+    err => setLocUI('fail', '위치 확인 실패', 'GPS 권한을 허용해 주세요'),
+    { enableHighAccuracy:true, maximumAge:10000 }
+  );
 }
-function calcDist(lat1,lng1,lat2,lng2) {
-  const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
-  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+
+function calcDist(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
+
+function checkLocation(lat, lng) {
+  // 출장지 미선택 시
+  if (!selectedSite) {
+    setLocUI('checking', '출장지를 먼저 선택해 주세요', '위 출장지 선택 후 위치가 확인됩니다');
+    locationOk = false;
+    return;
+  }
+  const dist = calcDist(lat, lng, selectedSite.lat, selectedSite.lng);
+  if (dist <= selectedSite.radius) {
+    currentSite = selectedSite;
+    locationOk = true;
+    setLocUI('ok', selectedSite.name, `출퇴근 가능 구역 내 (${Math.round(dist)}m)`);
+  } else {
+    currentSite = null;
+    locationOk = false;
+    setLocUI('fail', `${selectedSite.name} 구역 외`, `현재 위치: 반경 외 (${Math.round(dist)}m 떨어짐)`);
+  }
+}
+
+function setLocUI(type, name, status) {
+  const icon = document.getElementById('locIcon');
+  const nameEl = document.getElementById('locName');
+  const statusEl = document.getElementById('locStatus');
+  icon.className = 'location-icon ' + type;
+  const colors = { ok:'#2aab8e', fail:'#e74c3c', checking:'#d4890a' };
+  const svgStr = type === 'ok'
+    ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${colors[type]}" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`
+    : type === 'fail'
+    ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${colors[type]}" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
+    : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${colors[type]}" stroke-width="2.5"><circle cx="12" cy="10" r="4"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>`;
+  icon.innerHTML = svgStr;
+  nameEl.textContent = name;
+  statusEl.textContent = status;
+  statusEl.className = 'location-status ' + type;
+}
+
+// ══════════════════════════════════════════
+//  네비게이션
+// ══════════════════════════════════════════
+function goPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  const navMap = { pageHome:'navHome', pageHistory:'navHistory', pageStats:'navStats', pageNotice:'navNotice' };
+  if (navMap[pageId]) document.getElementById(navMap[pageId]).classList.add('active');
+  if (pageId === 'pageHistory') loadHistory();
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════
+//  토스트
+// ══════════════════════════════════════════
 let toastTimer;
-function showToast(msg) {
-  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  clearTimeout(toastTimer);
+  setTimeout(()=>t.classList.add('show'),10);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
 }
 </script>
 </body>
