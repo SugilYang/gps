@@ -836,7 +836,10 @@
     <div class="modal-title">직원 정보 등록</div>
     <div class="input-group">
       <label class="input-label">이름 *</label>
-      <input class="input-field" id="inputName" type="text" placeholder="실명을 입력하세요" maxlength="10">
+      <div style="display:flex; gap:8px;">
+        <input class="input-field" id="inputName" type="text" placeholder="실명을 입력하세요" maxlength="10" style="flex:1;">
+        <button onclick="searchEmp()" style="flex-shrink:0; padding:13px 16px; border-radius:12px; border:none; background:var(--teal); color:#fff; font-size:14px; font-weight:700; font-family:var(--font); cursor:pointer;">조회</button>
+      </div>
     </div>
     <div class="input-group">
       <label class="input-label">사번</label>
@@ -1035,9 +1038,10 @@ function closeEmpModal(e) {
 }
 
 // 이름 입력 시 구글 시트에서 자동 조회
-document.getElementById('inputName').addEventListener('input', async function() {
-  const name = this.value.trim();
-  if (name.length < 2) return;
+// 이름 입력 시 자동조회 제거 - 조회 버튼으로 대체
+async function searchEmp() {
+  const name = document.getElementById('inputName').value.trim();
+  if (!name) { showToast('이름을 입력해 주세요', 'error'); return; }
   showLoading('직원 정보 조회 중...');
   try {
     const result = await apiCall({ action:'getEmployees' });
@@ -1047,15 +1051,18 @@ document.getElementById('inputName').addEventListener('input', async function() 
         document.getElementById('inputEmpNo').value = emp['사번'];
         document.getElementById('inputPos').value   = emp['직위'];
         document.getElementById('inputDept').value  = emp['부서'];
+        showToast('직원 정보 조회 완료 ✓', 'success');
       } else {
         document.getElementById('inputEmpNo').value = '';
         document.getElementById('inputPos').value   = '';
         document.getElementById('inputDept').value  = '';
+        showToast('등록되지 않은 직원입니다', 'error');
       }
     }
-  } catch(e) {}
-  finally { hideLoading(); }
-});
+  } catch(e) {
+    showToast('네트워크 오류. 다시 시도해 주세요', 'error');
+  } finally { hideLoading(); }
+}
 
 async function saveEmpInfo() {
   const name = document.getElementById('inputName').value.trim();
