@@ -499,6 +499,34 @@
   .toast.success { background:var(--teal-dark); }
   .toast.error { background:var(--red); }
   .toast.warning { background:#d4890a; }
+
+  /* ── 로딩 오버레이 ── */
+  .loading-overlay {
+    position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,0.45); backdrop-filter: blur(3px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .loading-overlay.show { opacity: 1; pointer-events: all; }
+  .loading-box {
+    background: var(--white); border-radius: 20px;
+    padding: 28px 36px; text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .loading-spinner {
+    width: 40px; height: 40px; margin: 0 auto 14px;
+    border: 3px solid var(--teal-light);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-msg {
+    font-size: 14px; font-weight: 600;
+    color: var(--navy); font-family: var(--font);
+  }
 </style>
 </head>
 <body>
@@ -830,6 +858,14 @@
 <!-- 토스트 -->
 <div class="toast" id="toast"></div>
 
+<!-- 로딩 오버레이 -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <div class="loading-msg" id="loadingMsg">처리 중...</div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 //  구글 시트 연동 설정
@@ -1002,6 +1038,7 @@ function closeEmpModal(e) {
 document.getElementById('inputName').addEventListener('input', async function() {
   const name = this.value.trim();
   if (name.length < 2) return;
+  showLoading('직원 정보 조회 중...');
   try {
     const result = await apiCall({ action:'getEmployees' });
     if (result.success) {
@@ -1017,6 +1054,7 @@ document.getElementById('inputName').addEventListener('input', async function() 
       }
     }
   } catch(e) {}
+  finally { hideLoading(); }
 });
 
 async function saveEmpInfo() {
@@ -1025,14 +1063,10 @@ async function saveEmpInfo() {
   if (!name)  { showToast('이름을 입력해 주세요', 'error'); return; }
   if (!empNo) { showToast('등록되지 않은 직원입니다.\n관리자에게 문의하세요', 'error'); return; }
 
-  showToast('등록 중...', '');
+  showLoading('등록 중...');
   try {
     const deviceId = getDeviceId();
-    const result = await apiCall({
-      action: 'registerDevice',
-      name,
-      deviceId
-    });
+    const result = await apiCall({ action:'registerDevice', name, deviceId });
     if (result.success) {
       currentEmp = {
         name:  result.data['이름'],
@@ -1050,7 +1084,7 @@ async function saveEmpInfo() {
     }
   } catch(e) {
     showToast('네트워크 오류. 다시 시도해 주세요', 'error');
-  }
+  } finally { hideLoading(); }
 }
 
 // ══════════════════════════════════════════
@@ -1071,7 +1105,7 @@ async function handleCheckin() {
   const isLate = shiftStart ? compareTime(now, shiftStart) > 0 : false;
   const status = isLate ? '지각' : '정상';
 
-  showToast('출근 처리 중...', '');
+  showLoading('출근 처리 중...');
   try {
     const result = await apiCall({
       action: 'checkin',
@@ -1085,7 +1119,6 @@ async function handleCheckin() {
       status,
     });
     if (result.success) {
-      // 로컬에도 저장 (오프라인 대비)
       const rec = getRecord(today);
       rec.checkin = now;
       rec.site = selectedSite.name;
@@ -1101,7 +1134,7 @@ async function handleCheckin() {
     }
   } catch(e) {
     showToast('네트워크 오류. 다시 시도해 주세요', 'error');
-  }
+  } finally { hideLoading(); }
 }
 
 async function handleCheckout() {
@@ -1114,7 +1147,7 @@ async function handleCheckout() {
   const rec   = getRecord(today);
   if (!rec.checkin) { showToast('출근 기록이 없습니다', 'warning'); return; }
 
-  showToast('퇴근 처리 중...', '');
+  showLoading('퇴근 처리 중...');
   try {
     const result = await apiCall({
       action: 'checkout',
@@ -1136,7 +1169,7 @@ async function handleCheckout() {
     }
   } catch(e) {
     showToast('네트워크 오류. 다시 시도해 주세요', 'error');
-  }
+  } finally { hideLoading(); }
 }
 
 // ══════════════════════════════════════════
@@ -1520,6 +1553,17 @@ function goPage(pageId) {
   if (navMap[pageId]) document.getElementById(navMap[pageId]).classList.add('active');
   if (pageId === 'pageHistory') loadHistory();
   window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════
+//  로딩 오버레이
+// ══════════════════════════════════════════
+function showLoading(msg = '처리 중...') {
+  document.getElementById('loadingMsg').textContent = msg;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
 }
 
 // ══════════════════════════════════════════
