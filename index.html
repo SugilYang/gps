@@ -1171,12 +1171,13 @@ async function handleCheckin() {
       dept:        currentEmp.dept,
       site:        selectedSite.name,
       checkinSite: selectedSite.name,
-      date:        today,
+      checkinDate: today,
       time:        now,
       status,
     });
     if (result.success) {
       rec.checkin = now;
+      rec.checkinDate = today;
       rec.checkinSite = selectedSite.name;
       rec.status = status;
       saveRecord(today, rec);
@@ -1203,27 +1204,44 @@ async function handleCheckout() {
   const today = getTodayKey();
   const now   = getNowStr();
 
+  // 로컬에서 출근날짜 가져오기 (익일 퇴근 대비)
+  const rec = getRecord(today);
+  // 오늘 출근 기록 없으면 어제 기록 확인
+  let checkinDate = today;
+  let checkinRec  = rec;
+  if (!rec.checkin) {
+    const yesterday = getYesterdayKey();
+    const yRec = getRecord(yesterday);
+    if (yRec.checkin && !yRec.checkout) {
+      checkinDate = yesterday;
+      checkinRec  = yRec;
+    }
+  }
+
   showLoading('퇴근 처리 중...');
   try {
     const result = await apiCall({
       action:       'checkout',
       name:         currentEmp.name,
-      date:         today,
+      checkinDate,
+      checkoutDate: today,
       time:         now,
       checkoutSite: selectedSite.name,
     });
     if (result.success) {
-      const rec = getRecord(today);
-      rec.checkout = now;
-      rec.checkoutSite = selectedSite.name;
-      saveRecord(today, rec);
+      checkinRec.checkout = now;
+      checkinRec.checkoutDate = today;
+      checkinRec.checkoutSite = selectedSite.name;
+      saveRecord(checkinDate, checkinRec);
       document.getElementById('todayCheckout').textContent = now;
       document.getElementById('todayCheckoutSite').textContent = selectedSite.name;
       document.getElementById('checkoutTime').textContent = now;
       if (result.workTime) {
         document.getElementById('todayWorkTime').textContent = result.workTime;
       }
-      showToast(`퇴근 완료 ✓  ${now} · ${selectedSite.name}`, 'success');
+      // 익일 퇴근 안내
+      const isNextDay = checkinDate !== today;
+      showToast(`퇴근 완료 ✓  ${now}${isNextDay ? ' (익일)' : ''} · ${selectedSite.name}`, 'success');
     } else {
       showToast(result.message || '퇴근 처리 실패', 'error');
     }
@@ -1247,13 +1265,15 @@ async function loadHistory() {
       } else {
         list.innerHTML = result.data.map(r => {
           const isLate = r['상태'] === '지각';
-          const dateStr = formatDate(r['날짜']);
+          const cinDate  = formatDate(r['출근날짜']);
+          const coutDate = r['퇴근날짜'] && r['퇴근날짜'] !== r['출근날짜']
+            ? formatDate(r['퇴근날짜']) : null;
           const cinStr  = formatTime(r['출근시간']);
           const coutStr = formatTime(r['퇴근시간']);
           return `
           <div class="history-item" style="padding:14px 16px;margin-bottom:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <div style="font-size:13px;font-weight:700;color:var(--navy);">📅 ${dateStr}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);">📅 ${cinDate}</div>
               <div class="status-value tag ${isLate?'tag-late':'tag-ok'}">${r['상태']||'정상'}</div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
@@ -1262,8 +1282,8 @@ async function loadHistory() {
                 <div style="font-size:15px;font-weight:700;color:var(--navy);">${cinStr}</div>
               </div>
               <div style="background:var(--gray-xl);border-radius:10px;padding:10px;text-align:center;">
-                <div style="font-size:10px;color:var(--gray);font-weight:600;margin-bottom:3px;">퇴근</div>
-                <div style="font-size:15px;font-weight:700;color:var(--navy);">${coutStr}</div>
+                <div style="font-size:10px;color:var(--gray);font-weight:600;margin-bottom:3px;">퇴근${coutDate?'(익일)':''}</div>
+                <div style="font-size:15px;font-weight:700;color:var(--navy);">${coutStr||'-'}</div>
               </div>
               <div style="background:var(--teal-light);border-radius:10px;padding:10px;text-align:center;">
                 <div style="font-size:10px;color:var(--teal-dark);font-weight:600;margin-bottom:3px;">근무</div>
@@ -1291,6 +1311,11 @@ let selectedShift = '1교대';
 // ══════════════════════════════════════════
 function getTodayKey() {
   const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getYesterdayKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function getNowStr() {
@@ -1757,7 +1782,7 @@ function calcStats(historyData) {
   const thisYear  = now.getFullYear();
 
   const monthData = historyData.filter(r => {
-    const d = new Date(r['날짜']);
+    const d = new Date(r['출근날짜']);
     return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
   });
 
