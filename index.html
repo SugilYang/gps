@@ -975,10 +975,10 @@ async function loadSites() {
           flag:        getFlagFromTZ(tz),
           country:     getCountryFromTZ(tz),
           shift:       s['교대유형'] || '1교대',
-          shift1Start: s['1교대시작'] || '09:00',
-          shift1End:   s['1교대종료'] || '18:00',
-          shift2Start: s['2교대시작'] || '',
-          shift2End:   s['2교대종료'] || '',
+          shift1Start: parseSheetTime(s['1교대시작']) || '09:00',
+          shift1End:   parseSheetTime(s['1교대종료']) || '18:00',
+          shift2Start: parseSheetTime(s['2교대시작']) || '',
+          shift2End:   parseSheetTime(s['2교대종료']) || '',
         };
       });
       // 마지막 출장지 복원
@@ -1305,7 +1305,16 @@ function saveRecord(key, rec) {
   localStorage.setItem('ets_att_'+key, JSON.stringify(rec));
 }
 function compareTime(t1, t2) {
-  const toMin = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
+  const toMin = t => {
+    if (!t) return 0;
+    const str = String(t).trim();
+    // HH:MM 또는 H:MM 형식 처리
+    const parts = str.split(':');
+    if (parts.length >= 2) {
+      return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }
+    return 0;
+  };
   return toMin(t1) - toMin(t2);
 }
 function calcWorkMinutes(cin, cout) {
@@ -1662,6 +1671,25 @@ function goPage(pageId) {
 
 // ══════════════════════════════════════════
 //  날짜/시간 포맷 유틸
+
+// 구글 시트에서 온 시간값을 HH:MM 문자열로 변환
+function parseSheetTime(val) {
+  if (!val || val === '') return '';
+  const str = String(val).trim();
+  if (/^\d{1,2}:\d{2}$/.test(str)) {
+    const [h, m] = str.split(':');
+    return String(parseInt(h)).padStart(2,'0') + ':' + m.padStart(2,'0');
+  }
+  // 구글 시트 시간 소수점 형식 (0~1 사이 숫자)
+  const num = parseFloat(str);
+  if (!isNaN(num) && num > 0 && num < 1) {
+    const totalMin = Math.round(num * 24 * 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+  return str;
+}
 // ══════════════════════════════════════════
 function formatDate(val) {
   if (!val) return '-';
