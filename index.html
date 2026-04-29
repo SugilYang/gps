@@ -1178,6 +1178,7 @@ async function handleCheckin() {
     if (result.success) {
       rec.checkin = now;
       rec.checkinSite = selectedSite.name;
+      rec.status = status;
       saveRecord(today, rec);
       document.getElementById('todayCheckin').textContent = now;
       document.getElementById('todayCheckinSite').textContent = selectedSite.name;
@@ -1319,11 +1320,22 @@ function calcWorkMinutes(cin, cout) {
 }
 function updateStatus(rec) {
   if (!rec.checkin) return;
-  const shiftStart = selectedSite?.shift1Start || '09:00';
-  const isLate = compareTime(rec.checkin, shiftStart) > 0;
   const statusEl = document.getElementById('todayStatus');
-  statusEl.textContent = isLate ? '지각' : '정상';
-  statusEl.className = isLate ? 'status-value tag tag-late' : 'status-value tag tag-ok';
+
+  // 로컬에 저장된 status 우선 사용
+  let status = rec.status;
+  if (!status) {
+    // 없으면 selectedSite 기준으로 재계산
+    const shiftStart = selectedSite?.shift1Start || '09:00';
+    const isLate = compareTime(rec.checkin, shiftStart) > 0;
+    status = isLate ? '지각' : '정상';
+  }
+
+  statusEl.textContent = status;
+  statusEl.className = status === '지각'
+    ? 'status-value tag tag-late'
+    : 'status-value tag tag-ok';
+
   if (rec.checkin && rec.checkout) {
     const workMin = calcWorkMinutes(rec.checkin, rec.checkout);
     document.getElementById('todayWorkTime').textContent =
@@ -1481,27 +1493,27 @@ function initApp() {
   startClock();
   startLocationWatch();
 
-  // 구글 시트 연동은 백그라운드에서 처리 (앱 실행 막지 않음)
-  setTimeout(() => {
-    loadSites().catch(e => console.log('출장지 로드 실패'));
-    loadEmpInfo().catch(e => console.log('직원정보 로드 실패'));
-    loadNotices().catch(e => console.log('공지 로드 실패'));
-  }, 100);
+  // 구글 시트 연동 - 출장지 먼저 로드 후 나머지
+  loadSites().then(() => {
+    // 출장지 로드 완료 후 오늘 기록 복원
+    const today = getTodayKey();
+    const rec = getRecord(today);
+    if (rec.checkin) {
+      document.getElementById('todayCheckin').textContent = rec.checkin;
+      document.getElementById('checkinTime').textContent = rec.checkin;
+      if (rec.checkinSite) document.getElementById('todayCheckinSite').textContent = rec.checkinSite;
+    }
+    if (rec.checkout) {
+      document.getElementById('todayCheckout').textContent = rec.checkout;
+      document.getElementById('checkoutTime').textContent = rec.checkout;
+      if (rec.checkoutSite) document.getElementById('todayCheckoutSite').textContent = rec.checkoutSite;
+    }
+    if (rec.checkin) updateStatus(rec);
+  }).catch(() => {});
 
-  // 오늘 기록 복원 (로컬)
-  const today = getTodayKey();
-  const rec = getRecord(today);
-  if (rec.checkin) {
-    document.getElementById('todayCheckin').textContent = rec.checkin;
-    document.getElementById('checkinTime').textContent = rec.checkin;
-    if (rec.checkinSite) document.getElementById('todayCheckinSite').textContent = rec.checkinSite;
-  }
-  if (rec.checkout) {
-    document.getElementById('todayCheckout').textContent = rec.checkout;
-    document.getElementById('checkoutTime').textContent = rec.checkout;
-    if (rec.checkoutSite) document.getElementById('todayCheckoutSite').textContent = rec.checkoutSite;
-  }
-  if (rec.checkin) updateStatus(rec);
+  // 직원/공지는 백그라운드
+  loadEmpInfo().catch(() => {});
+  loadNotices().catch(() => {});
 }
 
 // ══════════════════════════════════════════
